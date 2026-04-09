@@ -18,6 +18,8 @@ config :explorer,
   # for not fully indexed blockchains
   decode_not_a_contract_calls: ConfigHelper.parse_bool_env_var("DECODE_NOT_A_CONTRACT_CALLS")
 
+config :explorer, Explorer.ChainData, backend: Explorer.ChainData.EthereumJSONRPC
+
 config :explorer, Explorer.ChainSpec.GenesisData, enabled: true
 
 config :explorer, Explorer.Chain.Cache.BlockNumber, enabled: true
