@@ -19,6 +19,7 @@ defmodule Indexer.Block.Fetcher do
   alias Explorer.Chain.Block.Reward
   alias Explorer.Chain.Cache.{Accounts, BlockNumber, Transactions, Uncles}
   alias Explorer.Chain.Cache.Blocks, as: BlocksCache
+  alias Explorer.ChainData.{Backend, BlockBatch}
   alias Explorer.Chain.Celo.Legacy.Accounts, as: CeloAccountsTransform
   alias Explorer.Chain.Filecoin.PendingAddressOperation, as: FilecoinPendingAddressOperation
   alias Indexer.Block.Catchup.Fetcher, as: CatchupFetcher
@@ -167,9 +168,10 @@ defmodule Indexer.Block.Fetcher do
       )
       when callback_module != nil do
     {fetch_time, fetch_result} =
-      :timer.tc(fn -> EthereumJSONRPC.fetch_blocks_by_range(range, json_rpc_named_arguments) end)
+      :timer.tc(fn -> Backend.blocks_by_range(range, true, json_rpc_named_arguments: json_rpc_named_arguments) end)
 
-    with {:blocks, {:ok, fetched_blocks}} <- {:blocks, fetch_result},
+    with {:blocks, {:ok, fetched_block_batch}} <- {:blocks, fetch_result},
+         fetched_blocks = block_batch_to_fetched_blocks(fetched_block_batch),
          %Blocks{
            blocks_params: blocks_params,
            transactions_params: transactions_params_without_receipts,
@@ -300,6 +302,22 @@ defmodule Indexer.Block.Fetcher do
       {step, {:error, reason}} -> {:error, {step, reason}}
       {:import, {:error, step, failed_value, changes_so_far}} -> {:error, {step, failed_value, changes_so_far}}
     end
+  end
+
+  defp block_batch_to_fetched_blocks(%BlockBatch{} = fetched_block_batch) do
+    %Blocks{
+      blocks_params: Map.get(fetched_block_batch.raw, :blocks_params, Enum.map(fetched_block_batch.blocks, & &1.raw)),
+      transactions_params:
+        Map.get(fetched_block_batch.raw, :transactions_params, Enum.map(fetched_block_batch.transactions, & &1.raw)),
+      withdrawals_params: Map.get(fetched_block_batch.raw, :withdrawals_params, fetched_block_batch.withdrawals),
+      block_second_degree_relations_params:
+        Map.get(
+          fetched_block_batch.raw,
+          :block_second_degree_relations_params,
+          fetched_block_batch.second_degree_relations
+        ),
+      errors: fetched_block_batch.errors
+    }
   end
 
   defp process_massive_blocks(fetched_blocks, MassiveBlocksFetcher), do: fetched_blocks

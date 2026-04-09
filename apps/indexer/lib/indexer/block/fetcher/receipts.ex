@@ -9,7 +9,7 @@ defmodule Indexer.Block.Fetcher.Receipts do
 
   require Logger
 
-  alias EthereumJSONRPC.Receipts
+  alias Explorer.ChainData.{Backend, Receipt}
   alias Indexer.Block
 
   @doc """
@@ -53,15 +53,18 @@ defmodule Indexer.Block.Fetcher.Receipts do
     |> Task.async_stream(
       fn
         block_number when is_integer(block_number) ->
-          Receipts.fetch_by_block_numbers([block_number], json_rpc_named_arguments)
+          Backend.receipts_by_block_numbers([block_number], json_rpc_named_arguments: json_rpc_named_arguments)
 
         transactions when is_list(transactions) ->
-          EthereumJSONRPC.fetch_transaction_receipts(transactions, json_rpc_named_arguments)
+          transactions
+          |> Enum.map(& &1.hash)
+          |> Backend.receipts_by_transaction_hashes(json_rpc_named_arguments: json_rpc_named_arguments)
       end,
       stream_opts
     )
     |> Enum.reduce_while({:ok, %{logs: [], receipts: []}}, fn
-      {:ok, {:ok, %{logs: logs, receipts: receipts}}}, {:ok, %{logs: acc_logs, receipts: acc_receipts}} ->
+      {:ok, {:ok, %Receipt.Batch{} = receipt_batch}}, {:ok, %{logs: acc_logs, receipts: acc_receipts}} ->
+        %{logs: logs, receipts: receipts} = receipt_batch_to_params(receipt_batch)
         {:cont, {:ok, %{logs: acc_logs ++ logs, receipts: acc_receipts ++ receipts}}}
 
       {:ok, {:error, reason}}, {:ok, _acc} ->
@@ -167,5 +170,12 @@ defmodule Indexer.Block.Fetcher.Receipts do
         {[block_number | blocks_acc], transactions_acc}
       end
     end)
+  end
+
+  defp receipt_batch_to_params(%Receipt.Batch{} = receipt_batch) do
+    %{
+      logs: Map.get(receipt_batch.raw, :logs, Enum.map(receipt_batch.logs, & &1.raw)),
+      receipts: Map.get(receipt_batch.raw, :receipts, Enum.map(receipt_batch.receipts, & &1.raw))
+    }
   end
 end

@@ -87,7 +87,7 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
           %{result: result}, {transactions, errors} when is_map(result) ->
             elixir_transaction = EthereumJSONRPC.Transaction.to_elixir(result)
             params = EthereumJSONRPC.Transaction.elixir_to_params(elixir_transaction)
-            {[transaction_from_params(params) | transactions], errors}
+            {[transaction_from_params(params, result) | transactions], errors}
 
           %{error: error}, {transactions, errors} ->
             {[nil | transactions], [error | errors]}
@@ -293,7 +293,7 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
     }
   end
 
-  defp transaction_from_params(params) do
+  defp transaction_from_params(params, raw \\ nil) do
     %Explorer.ChainData.Transaction{
       hash: params.hash,
       block_hash: params.block_hash,
@@ -311,7 +311,7 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
       nonce: params.nonce,
       type: Map.get(params, :type),
       status: Map.get(params, :status),
-      raw: params
+      raw: raw || params
     }
   end
 

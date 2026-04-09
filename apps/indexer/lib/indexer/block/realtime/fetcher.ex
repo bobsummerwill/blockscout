@@ -32,9 +32,10 @@ defmodule Indexer.Block.Realtime.Fetcher do
     ]
 
   alias Ecto.Changeset
-  alias EthereumJSONRPC.{Blocks, Subscription}
+  alias EthereumJSONRPC.Subscription
   alias Explorer.Chain
   alias Explorer.Chain.Cache.Counters.AverageBlockTime
+  alias Explorer.ChainData.Backend
   alias Explorer.Chain.Events.Publisher
   alias Explorer.Utility.MissingBlockRange
   alias Indexer.{Block, Tracer}
@@ -165,8 +166,8 @@ defmodule Indexer.Block.Realtime.Fetcher do
         } = state
       ) do
     {new_previous_number, new_last_realtime_blocks} =
-      with {:ok, %Blocks{blocks_params: [%{number: number, hash: hash}]}} <-
-             EthereumJSONRPC.fetch_block_by_tag("latest", json_rpc_named_arguments),
+      with {:ok, %Explorer.ChainData.Block{number: number, hash: hash}} <-
+             Backend.block_by_tag(:latest, json_rpc_named_arguments: json_rpc_named_arguments),
            {:new_block, true, _} <- {:new_block, hash != last_realtime_blocks[number], number} do
         number =
           if abnormal_gap?(number, previous_number) do
@@ -238,9 +239,12 @@ defmodule Indexer.Block.Realtime.Fetcher do
 
   defp subscribe_to_new_heads(%__MODULE__{subscription: nil} = state, subscribe_named_arguments)
        when is_list(subscribe_named_arguments) do
-    case EthereumJSONRPC.subscribe("newHeads", subscribe_named_arguments) do
+    case Backend.subscribe_new_blocks(json_rpc_named_arguments: subscribe_named_arguments) do
       {:ok, subscription} ->
         %__MODULE__{state | subscription: subscription}
+
+      :ignore ->
+        state
 
       {:error, reason} ->
         Logger.debug(fn -> ["Could not connect to websocket: #{inspect(reason)}. Continuing with polling."] end)

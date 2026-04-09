@@ -7,7 +7,6 @@ defmodule Indexer.Helper do
 
   import EthereumJSONRPC,
     only: [
-      fetch_block_number_by_tag: 2,
       id_to_params: 1,
       integer_to_quantity: 1,
       json_rpc: 2,
@@ -21,6 +20,7 @@ defmodule Indexer.Helper do
   alias EthereumJSONRPC.{Blocks, Transport}
   alias Explorer.Chain.Beacon.Blob, as: BeaconBlob
   alias Explorer.Chain.Cache.LatestL1BlockNumber
+  alias Explorer.ChainData.Backend
   alias Explorer.Chain.Hash
   alias Explorer.SmartContract.Reader, as: ContractReader
   alias Indexer.Fetcher.Beacon.Blob, as: BeaconBlobFetcher
@@ -178,7 +178,7 @@ defmodule Indexer.Helper do
   @spec get_block_number_by_tag(binary(), list(), non_neg_integer()) :: {:ok, non_neg_integer()} | {:error, atom()}
   def get_block_number_by_tag(tag, json_rpc_named_arguments, retries \\ @finite_retries_number) do
     error_message = &"Cannot fetch #{tag} block number. Error: #{inspect(&1)}"
-    repeated_call(&fetch_block_number_by_tag/2, [tag, json_rpc_named_arguments], error_message, retries)
+    repeated_call(&fetch_block_number_by_tag_from_backend/2, [tag, json_rpc_named_arguments], error_message, retries)
   end
 
   @doc """
@@ -191,16 +191,9 @@ defmodule Indexer.Helper do
   def get_transaction_by_hash(hash, _json_rpc_named_arguments, _retries_left) when is_nil(hash), do: {:ok, nil}
 
   def get_transaction_by_hash(hash, json_rpc_named_arguments, retries) do
-    req =
-      request(%{
-        id: 0,
-        method: "eth_getTransactionByHash",
-        params: [hash]
-      })
-
     error_message = &"eth_getTransactionByHash failed. Error: #{inspect(&1)}"
 
-    repeated_call(&json_rpc/2, [req, json_rpc_named_arguments], error_message, retries)
+    repeated_call(&fetch_transaction_by_hash_from_backend/2, [hash, json_rpc_named_arguments], error_message, retries)
   end
 
   @doc """
@@ -650,6 +643,33 @@ defmodule Indexer.Helper do
         end
     end
   end
+
+  defp fetch_block_number_by_tag_from_backend(tag, json_rpc_named_arguments) do
+    with {:ok, %Explorer.ChainData.Block{number: number}} <-
+           Backend.block_by_tag(chain_data_tag(tag), json_rpc_named_arguments: json_rpc_named_arguments),
+         false <- is_nil(number) do
+      {:ok, number}
+    else
+      {:ok, nil} -> {:error, :not_found}
+      true -> {:error, :missing_block_number}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp fetch_transaction_by_hash_from_backend(hash, json_rpc_named_arguments) do
+    with {:ok, [transaction], []} <-
+           Backend.transactions_by_hashes([hash], json_rpc_named_arguments: json_rpc_named_arguments) do
+      {:ok, transaction && transaction.raw}
+    else
+      {:ok, [_transaction], [error | _]} -> {:error, error}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp chain_data_tag("latest"), do: :latest
+  defp chain_data_tag("safe"), do: :safe
+  defp chain_data_tag("pending"), do: :pending
+  defp chain_data_tag("earliest"), do: :earliest
 
   @doc """
     Fetches blocks info from the given list of events (logs).
