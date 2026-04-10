@@ -20,7 +20,10 @@ defmodule Explorer.ChainData.STRATO.ConfigTest do
       profile: :private_explorer_api,
       base_url: "http://configured",
       recv_timeout: :timer.seconds(10),
-      endpoints: [chain_info: "/chain-info", blocks_by_range: "/blocks/range"]
+      endpoints: [
+        chain_info: "/eth/v1.2/blockscout/chain-info",
+        blocks_by_range: "/eth/v1.2/blockscout/blocks/range"
+      ]
     )
 
     config =
@@ -33,8 +36,24 @@ defmodule Explorer.ChainData.STRATO.ConfigTest do
 
     assert Keyword.get(config, :base_url) == "http://override"
     assert Keyword.get(config, :recv_timeout) == :timer.seconds(10)
-    assert Config.endpoint(:chain_info, config) == "/chain-info"
+    assert Config.endpoint(:chain_info, config) == "/eth/v1.2/blockscout/chain-info"
     assert Config.endpoint(:blocks_by_range, config) == "/custom-blocks/range"
+  end
+
+  test "get/1 loads the private explorer endpoint set with the blockscout namespace" do
+    Application.put_env(
+      :explorer,
+      Explorer.ChainData.STRATO,
+      profile: :private_explorer_api,
+      base_url: "http://configured"
+    )
+
+    config = Config.get()
+
+    assert Config.profile(config) == :private_explorer_api
+    assert Config.endpoint(:chain_info, config) == "/eth/v1.2/blockscout/chain-info"
+    assert Config.endpoint(:blocks_by_range, config) == "/eth/v1.2/blockscout/blocks/range"
+    assert Config.endpoint(:state_codes, config) == "/eth/v1.2/blockscout/state/codes"
   end
 
   test "get/1 loads the core API endpoint set when configured" do

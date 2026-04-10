@@ -2,19 +2,19 @@ defmodule Explorer.ChainData.STRATO.Config do
   @moduledoc false
 
   @private_explorer_api_endpoints [
-    chain_info: "/chain-info",
-    block_by_tag: "/blocks/by-tag",
-    blocks_by_range: "/blocks/range",
-    blocks_by_numbers: "/blocks/by-number",
-    blocks_by_hashes: "/blocks/by-hash",
-    transactions_by_hashes: "/transactions/by-hash",
-    transactions_count_by_block_numbers: "/transactions/count/by-block-number",
-    receipts_by_block_numbers: "/receipts/by-block-number",
-    receipts_by_transaction_hashes: "/receipts/by-transaction-hash",
-    logs_search: "/logs/search",
-    state_balances: "/state/balances",
-    state_nonces: "/state/nonces",
-    state_codes: "/state/codes"
+    chain_info: "/eth/v1.2/blockscout/chain-info",
+    block_by_tag: "/eth/v1.2/blockscout/blocks/by-tag",
+    blocks_by_range: "/eth/v1.2/blockscout/blocks/range",
+    blocks_by_numbers: "/eth/v1.2/blockscout/blocks/by-number",
+    blocks_by_hashes: "/eth/v1.2/blockscout/blocks/by-hash",
+    transactions_by_hashes: "/eth/v1.2/blockscout/transactions/by-hash",
+    transactions_count_by_block_numbers: "/eth/v1.2/blockscout/transactions/count/by-block-number",
+    receipts_by_block_numbers: "/eth/v1.2/blockscout/receipts/by-block-number",
+    receipts_by_transaction_hashes: "/eth/v1.2/blockscout/receipts/by-transaction-hash",
+    logs_search: "/eth/v1.2/blockscout/logs/search",
+    state_balances: "/eth/v1.2/blockscout/state/balances",
+    state_nonces: "/eth/v1.2/blockscout/state/nonces",
+    state_codes: "/eth/v1.2/blockscout/state/codes"
   ]
 
   @core_api_endpoints [

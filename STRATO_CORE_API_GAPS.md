@@ -164,6 +164,9 @@ These match the existing `:private_explorer_api` profile already scaffolded in
 Blockscout, so STRATO can add them incrementally without changing the
 Blockscout-side behaviour contract again.
 
+The exact request and response contract for those endpoints is documented in
+[`STRATO_PRIVATE_EXPLORER_API_SPEC.md`](./STRATO_PRIVATE_EXPLORER_API_SPEC.md).
+
 ## Recommendation
 
 Use the current `:core_api` profile as the verified baseline for:
