@@ -9,16 +9,14 @@ defmodule Indexer.Fetcher.OnDemand.CoinBalance do
 
   use Indexer.Fetcher, restart: :permanent
 
-  import EthereumJSONRPC, only: [integer_to_quantity: 1]
-
   require Logger
 
-  alias EthereumJSONRPC.FetchedBalances
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.{Address, Hash}
   alias Explorer.Chain.Address.CoinBalance
   alias Explorer.Chain.Cache.{Accounts, BlockNumber}
   alias Explorer.Chain.Cache.Counters.AverageBlockTime
+  alias Explorer.ChainData.{Backend, Balance}
   alias Explorer.Utility.RateLimiter
   alias Indexer.BufferedTask
   alias Indexer.Fetcher.CoinBalance.Helper, as: CoinBalanceHelper
@@ -108,8 +106,11 @@ defmodule Indexer.Fetcher.OnDemand.CoinBalance do
       |> Enum.uniq()
 
     case fetch_balances(all_balances_params, json_rpc_named_arguments) do
-      {:ok, %FetchedBalances{params_list: params_list}} ->
-        params_map = Map.new(params_list, fn params -> {{params.block_number, params.address_hash}, params} end)
+      {:ok, %Balance.Batch{balances: balances}} ->
+        params_map =
+          balances
+          |> Enum.map(&balance_to_params/1)
+          |> Map.new(fn params -> {{params.block_number, params.address_hash}, params} end)
 
         entries_by_type[:fetch_and_update]
         |> get_balances_responses(params_map)
@@ -189,9 +190,9 @@ defmodule Indexer.Fetcher.OnDemand.CoinBalance do
   defp fetch_balances(params, json_rpc_named_arguments) do
     params
     |> Enum.map(fn {block_number, address_hash} ->
-      %{block_quantity: integer_to_quantity(block_number), hash_data: address_hash}
+      %Balance.Request{block_number: block_number, address_hash: address_hash}
     end)
-    |> EthereumJSONRPC.fetch_balances(json_rpc_named_arguments, latest_block_number())
+    |> Backend.balances_at(json_rpc_named_arguments: json_rpc_named_arguments)
   end
 
   defp do_import([]), do: :ok
@@ -208,6 +209,10 @@ defmodule Indexer.Fetcher.OnDemand.CoinBalance do
 
   defp latest_block_number do
     BlockNumber.get_max()
+  end
+
+  defp balance_to_params(%Balance{address_hash: address_hash, block_number: block_number, value: value}) do
+    %{address_hash: address_hash, block_number: block_number, value: value}
   end
 
   @spec stale_balance_window(non_neg_integer()) :: non_neg_integer() | {:error, :empty_database}

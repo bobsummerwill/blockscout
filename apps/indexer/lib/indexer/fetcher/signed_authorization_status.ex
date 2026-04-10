@@ -9,7 +9,6 @@ defmodule Indexer.Fetcher.SignedAuthorizationStatus do
   require Logger
 
   import Ecto.Query, only: [from: 2]
-  import EthereumJSONRPC, only: [integer_to_quantity: 1]
 
   import Explorer.Chain.SignedAuthorization.Reader,
     only: [
@@ -21,6 +20,7 @@ defmodule Indexer.Fetcher.SignedAuthorizationStatus do
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.{Address, Block, BlockNumberHelper, Hash, SignedAuthorization, Transaction}
   alias Explorer.Chain.Cache.Accounts
+  alias Explorer.ChainData.{Backend, Nonce}
   alias Explorer.Chain.SmartContract.Proxy.Models.Implementation
   alias Indexer.{BufferedTask, Tracer}
 
@@ -327,20 +327,23 @@ defmodule Indexer.Fetcher.SignedAuthorizationStatus do
   defp fetch_nonces(entries, json_rpc_named_arguments) do
     # fetch nonces for at the end of the previous block, to know starting nonces for the current block
     entries
-    |> Enum.map(
-      &%{
-        block_quantity: integer_to_quantity(BlockNumberHelper.previous_block_number(&1.block_number)),
-        address: to_string(&1.address_hash)
-      }
-    )
-    |> EthereumJSONRPC.fetch_nonces(json_rpc_named_arguments)
+    |> Enum.map(&%Nonce.Request{
+      block_number: BlockNumberHelper.previous_block_number(&1.block_number),
+      address_hash: to_string(&1.address_hash)
+    })
+    |> Backend.nonces_at(json_rpc_named_arguments: json_rpc_named_arguments)
     |> case do
-      {:ok, %{params_list: params}} ->
+      {:ok, %Nonce.Batch{nonces: nonces}} ->
+        params = Enum.map(nonces, &nonce_to_params/1)
         {:ok, nonces_map_from_params(params)}
 
       error ->
         error
     end
+  end
+
+  defp nonce_to_params(%Nonce{address_hash: address_hash, block_number: block_number, value: value}) do
+    %{address: address_hash, block_number: block_number, nonce: value}
   end
 
   defp nonces_map_from_params(params) do

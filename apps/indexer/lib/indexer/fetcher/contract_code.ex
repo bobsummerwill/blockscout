@@ -8,8 +8,6 @@ defmodule Indexer.Fetcher.ContractCode do
 
   require Logger
 
-  import EthereumJSONRPC, only: [integer_to_quantity: 1]
-
   import Explorer.Chain.Transaction.Reader,
     only: [
       transaction_with_unfetched_created_contract_code?: 1,
@@ -19,7 +17,8 @@ defmodule Indexer.Fetcher.ContractCode do
   alias EthereumJSONRPC.Utility.RangesHelper
   alias Explorer.Chain
   alias Explorer.Chain.{Address, Block, Hash, Transaction}
-  alias Explorer.Chain.Cache.{Accounts, BlockNumber}
+  alias Explorer.Chain.Cache.Accounts
+  alias Explorer.ChainData.{Backend, Balance, Code}
   alias Explorer.Chain.Zilliqa.Helper, as: ZilliqaHelper
   alias Indexer.{BufferedTask, Tracer}
   alias Indexer.Fetcher.CoinBalance.Helper, as: CoinBalanceHelper
@@ -183,15 +182,14 @@ defmodule Indexer.Fetcher.ContractCode do
   defp fetch_contract_codes(entries, json_rpc_named_arguments) do
     entries
     |> RangesHelper.filter_traceable_block_numbers()
-    |> Enum.map(
-      &%{
-        block_quantity: integer_to_quantity(&1.block_number),
-        address: to_string(&1.created_contract_address_hash)
-      }
-    )
-    |> EthereumJSONRPC.fetch_codes(json_rpc_named_arguments)
+    |> Enum.map(&%Code.Request{
+      block_number: &1.block_number,
+      address_hash: to_string(&1.created_contract_address_hash)
+    })
+    |> Backend.codes_at(json_rpc_named_arguments: json_rpc_named_arguments)
     |> case do
-      {:ok, %{params_list: params, errors: []}} ->
+      {:ok, %Code.Batch{codes: codes, errors: []}} ->
+        params = Enum.map(codes, &code_to_params/1)
         code_addresses_params = Addresses.extract_addresses(%{codes: params})
         {:ok, code_addresses_params}
 
@@ -208,16 +206,18 @@ defmodule Indexer.Fetcher.ContractCode do
 
   defp fetch_balances(entries, json_rpc_named_arguments) do
     entries
-    |> Enum.map(
-      &%{
-        block_quantity: integer_to_quantity(&1.block_number),
-        hash_data: to_string(&1.created_contract_address_hash)
-      }
-    )
-    |> EthereumJSONRPC.fetch_balances(json_rpc_named_arguments, BlockNumber.get_max())
+    |> Enum.map(&%Balance.Request{
+      block_number: &1.block_number,
+      address_hash: to_string(&1.created_contract_address_hash)
+    })
+    |> Backend.balances_at(json_rpc_named_arguments: json_rpc_named_arguments)
     |> case do
-      {:ok, fetched_balances} ->
-        balance_addresses_params = CoinBalanceHelper.balances_params_to_address_params(fetched_balances.params_list)
+      {:ok, %Balance.Batch{balances: balances}} ->
+        balance_addresses_params =
+          balances
+          |> Enum.map(&balance_to_params/1)
+          |> CoinBalanceHelper.balances_params_to_address_params()
+
         {:ok, balance_addresses_params}
 
       {:error, reason} ->
@@ -227,6 +227,14 @@ defmodule Indexer.Fetcher.ContractCode do
 
         {:error, reason}
     end
+  end
+
+  defp code_to_params(%Code{address_hash: address_hash, block_number: block_number, value: value}) do
+    %{address: address_hash, block_number: block_number, code: value}
+  end
+
+  defp balance_to_params(%Balance{address_hash: address_hash, block_number: block_number, value: value}) do
+    %{address_hash: address_hash, block_number: block_number, value: value}
   end
 
   # Imports addresses into the database

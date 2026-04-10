@@ -3,13 +3,14 @@ defmodule Indexer.Fetcher.CoinBalance.Helper do
   Common functions for `Indexer.Fetcher.CoinBalance.Catchup` and `Indexer.Fetcher.CoinBalance.Realtime` modules
   """
 
-  import EthereumJSONRPC, only: [integer_to_quantity: 1, quantity_to_integer: 1]
+  import EthereumJSONRPC, only: [quantity_to_integer: 1]
 
   require Logger
 
-  alias EthereumJSONRPC.{Blocks, FetchedBalances, Utility.RangesHelper}
+  alias EthereumJSONRPC.Utility.RangesHelper
   alias Explorer.Chain
-  alias Explorer.Chain.Cache.{Accounts, BlockNumber}
+  alias Explorer.Chain.Cache.Accounts
+  alias Explorer.ChainData.{Backend, Balance}
   alias Explorer.Chain.Hash
   alias Indexer.BufferedTask
 
@@ -54,11 +55,11 @@ defmodule Indexer.Fetcher.CoinBalance.Helper do
     Logger.debug(fn -> "fetching" end)
 
     unique_filtered_entries
-    |> Enum.map(&entry_to_params/1)
-    |> EthereumJSONRPC.fetch_balances(json_rpc_named_arguments, BlockNumber.get_max())
+    |> Enum.map(&entry_to_request/1)
+    |> Backend.balances_at(json_rpc_named_arguments: json_rpc_named_arguments)
     |> case do
-      {:ok, fetched_balances} ->
-        run_fetched_balances(fetched_balances, fetcher_type)
+      {:ok, balance_batch} ->
+        run_balance_batch(balance_batch, fetcher_type)
 
       {:error, reason} ->
         Logger.error(
@@ -76,9 +77,9 @@ defmodule Indexer.Fetcher.CoinBalance.Helper do
     {address_hash_bytes, block_number}
   end
 
-  defp entry_to_params({address_hash_bytes, block_number}) when is_integer(block_number) do
+  defp entry_to_request({address_hash_bytes, block_number}) when is_integer(block_number) do
     {:ok, address_hash} = Hash.Address.cast(address_hash_bytes)
-    %{block_quantity: integer_to_quantity(block_number), hash_data: to_string(address_hash)}
+    %Balance.Request{block_number: block_number, address_hash: to_string(address_hash)}
   end
 
   # We want to record all historical balances for an address, but have the address itself have balance from the
@@ -130,7 +131,9 @@ defmodule Indexer.Fetcher.CoinBalance.Helper do
     })
   end
 
-  defp run_fetched_balances(%FetchedBalances{errors: errors, params_list: params_list}, fetcher_type) do
+  defp run_balance_batch(%Balance.Batch{errors: errors, balances: balances}, fetcher_type) do
+    params_list = Enum.map(balances, &balance_to_params/1)
+
     with {:ok, imported} <- import_fetched_balances(params_list, fetcher_type) do
       Accounts.drop(imported[:addresses])
     end
@@ -194,8 +197,8 @@ defmodule Indexer.Fetcher.CoinBalance.Helper do
       |> Enum.dedup()
 
     Enum.reduce(block_numbers, %{}, fn block_number, map ->
-      case EthereumJSONRPC.fetch_blocks_by_range(block_number..block_number, json_rpc_named_arguments) do
-        {:ok, %Blocks{blocks_params: [%{timestamp: timestamp}]}} ->
+      case Backend.blocks_by_range(block_number..block_number, true, json_rpc_named_arguments: json_rpc_named_arguments) do
+        {:ok, %Explorer.ChainData.BlockBatch{blocks: [%Explorer.ChainData.Block{timestamp: timestamp}]}} ->
           day = DateTime.to_date(timestamp)
           Map.put(map, "#{block_number}", day)
 
@@ -224,5 +227,9 @@ defmodule Indexer.Fetcher.CoinBalance.Helper do
         nil
       end
     end)
+  end
+
+  defp balance_to_params(%Balance{address_hash: address_hash, block_number: block_number, value: value}) do
+    %{address_hash: address_hash, block_number: block_number, value: value}
   end
 end
