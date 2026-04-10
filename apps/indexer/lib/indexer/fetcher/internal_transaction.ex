@@ -24,6 +24,7 @@ defmodule Indexer.Fetcher.InternalTransaction do
   alias Explorer.Chain
   alias Explorer.Chain.{Block, Hash, PendingBlockOperation, PendingTransactionOperation, Transaction}
   alias Explorer.Chain.Cache.{Accounts, Blocks}
+  alias Explorer.ChainData.Backend
   alias Indexer.{BufferedTask, Tracer}
   alias Indexer.Fetcher.InternalTransaction.Supervisor, as: InternalTransactionSupervisor
   alias Indexer.Transform.{AddressCoinBalances, Addresses, AddressTokenBalances}
@@ -172,7 +173,8 @@ defmodule Indexer.Fetcher.InternalTransaction do
 
         block_numbers_or_transactions
         |> check_and_filter_block_numbers()
-        |> EthereumJSONRPC.fetch_block_internal_transactions(json_rpc_named_arguments)
+        |> Backend.internal_transactions_by_block_numbers(json_rpc_named_arguments: json_rpc_named_arguments)
+        |> internal_transactions_to_params()
 
       :transaction_params ->
         Logger.debug("fetching internal transactions by transactions")
@@ -265,7 +267,8 @@ defmodule Indexer.Fetcher.InternalTransaction do
 
       transactions ->
         try do
-          EthereumJSONRPC.fetch_internal_transactions(transactions, json_rpc_named_arguments)
+          Backend.internal_transactions_by_transactions(transactions, json_rpc_named_arguments: json_rpc_named_arguments)
+          |> internal_transactions_to_params()
         catch
           :exit, error ->
             {:error, error, __STACKTRACE__}
@@ -446,6 +449,12 @@ defmodule Indexer.Fetcher.InternalTransaction do
     |> Enum.map(& &1.block_number)
     |> Enum.uniq()
   end
+
+  defp internal_transactions_to_params({:ok, internal_transactions}) do
+    {:ok, Enum.map(internal_transactions, & &1.params)}
+  end
+
+  defp internal_transactions_to_params(other), do: other
 
   def defaults do
     [

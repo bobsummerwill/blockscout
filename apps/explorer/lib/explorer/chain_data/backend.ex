@@ -76,16 +76,22 @@ defmodule Explorer.ChainData.Backend do
     impl().codes_at(requests, opts)
   end
 
-  @spec contract_calls([Explorer.ChainData.Call.Request.t()], term(), ChainData.opts()) ::
+  @spec contract_calls([Explorer.ChainData.Call.Request.t()], term(), boolean(), ChainData.opts()) ::
           [Explorer.ChainData.Call.Result.t()]
-  def contract_calls(requests, abi, opts \\ []) do
-    impl().contract_calls(requests, abi, opts)
+  def contract_calls(requests, abi, leave_error_as_map \\ false, opts \\ []) do
+    impl().contract_calls(requests, abi, leave_error_as_map, opts)
   end
 
   @spec internal_transactions_by_block_numbers([EthereumJSONRPC.block_number()], ChainData.opts()) ::
           {:ok, [Explorer.ChainData.InternalTransaction.t()]} | {:error, term()} | :ignore
   def internal_transactions_by_block_numbers(block_numbers, opts \\ []) do
     impl().internal_transactions_by_block_numbers(block_numbers, opts)
+  end
+
+  @spec internal_transactions_by_transactions([map()], ChainData.opts()) ::
+          {:ok, [Explorer.ChainData.InternalTransaction.t()]} | {:error, term()} | :ignore
+  def internal_transactions_by_transactions(transactions, opts \\ []) do
+    impl().internal_transactions_by_transactions(transactions, opts)
   end
 
   @spec raw_traces_by_transaction(

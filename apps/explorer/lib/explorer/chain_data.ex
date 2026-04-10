@@ -61,10 +61,13 @@ defmodule Explorer.ChainData do
   @callback codes_at([Code.Request.t()], opts()) ::
               {:ok, Code.Batch.t()} | {:error, term()}
 
-  @callback contract_calls([Call.Request.t()], term(), opts()) ::
+  @callback contract_calls([Call.Request.t()], term(), boolean(), opts()) ::
               [Call.Result.t()]
 
   @callback internal_transactions_by_block_numbers([EthereumJSONRPC.block_number()], opts()) ::
+              {:ok, [InternalTransaction.t()]} | {:error, term()} | :ignore
+
+  @callback internal_transactions_by_transactions([map()], opts()) ::
               {:ok, [InternalTransaction.t()]} | {:error, term()} | :ignore
 
   @callback raw_traces_by_transaction(

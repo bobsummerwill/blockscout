@@ -200,7 +200,7 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
   end
 
   @impl Explorer.ChainData
-  def contract_calls(requests, abi, opts) do
+  def contract_calls(requests, abi, leave_error_as_map, opts) do
     rpc_requests =
       Enum.map(requests, fn %Call.Request{} = request ->
         request
@@ -209,12 +209,28 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
         |> maybe_put_from(request.from)
       end)
 
-    EthereumJSONRPC.execute_contract_functions(rpc_requests, abi, json_rpc_named_arguments(opts))
+    EthereumJSONRPC.execute_contract_functions(
+      rpc_requests,
+      abi,
+      json_rpc_named_arguments(opts),
+      leave_error_as_map
+    )
   end
 
   @impl Explorer.ChainData
   def internal_transactions_by_block_numbers(block_numbers, opts) do
     case EthereumJSONRPC.fetch_block_internal_transactions(block_numbers, json_rpc_named_arguments(opts)) do
+      {:ok, params_list} ->
+        {:ok, Enum.map(params_list, &%InternalTransaction{params: &1})}
+
+      other ->
+        other
+    end
+  end
+
+  @impl Explorer.ChainData
+  def internal_transactions_by_transactions(transactions, opts) do
+    case EthereumJSONRPC.fetch_internal_transactions(transactions, json_rpc_named_arguments(opts)) do
       {:ok, params_list} ->
         {:ok, Enum.map(params_list, &%InternalTransaction{params: &1})}
 

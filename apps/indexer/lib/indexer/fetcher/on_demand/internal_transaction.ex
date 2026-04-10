@@ -11,6 +11,7 @@ defmodule Indexer.Fetcher.OnDemand.InternalTransaction do
   alias Explorer.{Chain, Etherscan, PagingOptions}
   alias Explorer.Chain.{Block, BlockNumberHelper, Hash, InternalTransaction, Transaction}
   alias Explorer.Chain.Cache.BlockNumber
+  alias Explorer.ChainData.Backend
   alias Explorer.Repo
   alias Explorer.Utility.{AddressIdToAddressHash, InternalTransactionsAddressPlaceholder}
   alias Indexer.Fetcher.InternalTransaction, as: InternalTransactionFetcher
@@ -115,8 +116,11 @@ defmodule Indexer.Fetcher.OnDemand.InternalTransaction do
       }
     ]
 
-    case EthereumJSONRPC.fetch_internal_transactions(params, json_rpc_named_arguments) do
-      {:ok, internal_transactions_params} ->
+    case Backend.internal_transactions_by_transactions(params, json_rpc_named_arguments: json_rpc_named_arguments) do
+      {:ok, internal_transactions} ->
+        internal_transactions_params
+        = Enum.map(internal_transactions, & &1.params)
+
         internal_transactions_params
         |> Enum.map(&serialize/1)
         |> different_from_parent_transaction()
@@ -529,9 +533,9 @@ defmodule Indexer.Fetcher.OnDemand.InternalTransaction do
     variant = Keyword.fetch!(json_rpc_named_arguments, :variant)
 
     if variant in InternalTransactionFetcher.block_traceable_variants() do
-      case EthereumJSONRPC.fetch_block_internal_transactions(block_numbers, json_rpc_named_arguments) do
+      case Backend.internal_transactions_by_block_numbers(block_numbers, json_rpc_named_arguments: json_rpc_named_arguments) do
         {:ok, result} ->
-          result
+          Enum.map(result, & &1.params)
 
         error ->
           Logger.error("Failed to fetch internal transactions for blocks #{inspect(block_numbers)}: #{inspect(error)}")
@@ -555,7 +559,9 @@ defmodule Indexer.Fetcher.OnDemand.InternalTransaction do
 
           transactions ->
             try do
-              EthereumJSONRPC.fetch_internal_transactions(transactions, json_rpc_named_arguments)
+              Backend.internal_transactions_by_transactions(transactions,
+                json_rpc_named_arguments: json_rpc_named_arguments
+              )
             catch
               :exit, error ->
                 {:error, error, __STACKTRACE__}
@@ -563,7 +569,7 @@ defmodule Indexer.Fetcher.OnDemand.InternalTransaction do
         end
         |> case do
           {:ok, internal_transactions} ->
-            internal_transactions ++ acc_list
+            Enum.map(internal_transactions, & &1.params) ++ acc_list
 
           error_or_ignore ->
             Logger.error("Failed to fetch internal transactions for block #{block_number}: #{inspect(error_or_ignore)}")

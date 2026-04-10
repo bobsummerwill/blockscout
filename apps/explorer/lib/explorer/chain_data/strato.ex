@@ -45,10 +45,13 @@ defmodule Explorer.ChainData.STRATO do
   def codes_at(_requests, _opts), do: @not_implemented
 
   @impl Explorer.ChainData
-  def contract_calls(_requests, _abi, _opts), do: []
+  def contract_calls(_requests, _abi, _leave_error_as_map, _opts), do: []
 
   @impl Explorer.ChainData
   def internal_transactions_by_block_numbers(_block_numbers, _opts), do: :ignore
+
+  @impl Explorer.ChainData
+  def internal_transactions_by_transactions(_transactions, _opts), do: :ignore
 
   @impl Explorer.ChainData
   def raw_traces_by_transaction(_transaction, _opts), do: :ignore

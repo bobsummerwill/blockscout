@@ -8,6 +8,7 @@ defmodule Explorer.SmartContract.Reader do
 
   alias EthereumJSONRPC.{Contract, Encoder}
   alias Explorer.Chain.{Hash, SmartContract}
+  alias Explorer.ChainData.{Backend, Call}
   alias Explorer.Chain.SmartContract.Proxy
   alias Explorer.SmartContract.Helper
 
@@ -179,7 +180,12 @@ defmodule Explorer.SmartContract.Reader do
     json_rpc_named_arguments =
       Keyword.get(opts, :json_rpc_named_arguments) || Application.get_env(:explorer, :json_rpc_named_arguments)
 
-    EthereumJSONRPC.execute_contract_functions(requests, abi, json_rpc_named_arguments)
+    Backend.contract_calls(
+      Enum.map(requests, &call_request_from_contract_call/1),
+      abi,
+      false,
+      json_rpc_named_arguments: json_rpc_named_arguments
+    )
   end
 
   @spec query_contracts([Contract.call()], term(), contract_call_options(), true | false, Keyword.t()) :: [
@@ -191,7 +197,26 @@ defmodule Explorer.SmartContract.Reader do
       |> Application.get_env(:json_rpc_named_arguments)
       |> Keyword.merge(options)
 
-    EthereumJSONRPC.execute_contract_functions(requests, abi, json_rpc_named_arguments, leave_error_as_map)
+    Backend.contract_calls(
+      Enum.map(requests, &call_request_from_contract_call/1),
+      abi,
+      leave_error_as_map,
+      json_rpc_named_arguments: json_rpc_named_arguments
+    )
+  end
+
+  defp call_request_from_contract_call(%{
+         contract_address: contract_address,
+         method_id: method_id,
+         args: args
+       } = request) do
+    %Call.Request{
+      contract_address: contract_address,
+      method_id: method_id,
+      args: args,
+      block_number: Map.get(request, :block_number),
+      from: Map.get(request, :from)
+    }
   end
 
   @doc """

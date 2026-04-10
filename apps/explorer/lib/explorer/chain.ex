@@ -1777,9 +1777,9 @@ defmodule Explorer.Chain do
   def fetch_transaction_raw_traces(%{hash: hash, block_number: block_number}) do
     json_rpc_named_arguments = Application.get_env(:explorer, :json_rpc_named_arguments)
 
-    EthereumJSONRPC.fetch_transaction_raw_traces(
+    Explorer.ChainData.Backend.raw_traces_by_transaction(
       %{hash: to_string(hash), block_number: block_number},
-      json_rpc_named_arguments
+      json_rpc_named_arguments: json_rpc_named_arguments
     )
   end
 
