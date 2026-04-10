@@ -3,7 +3,7 @@ defmodule Explorer.Chain.InternalTransaction do
 
   use Explorer.Schema
 
-  alias Explorer.{Chain, Helper, PagingOptions, QueryHelper, Repo}
+  alias Explorer.{Chain, ChainData, Helper, PagingOptions, QueryHelper, Repo}
 
   alias Explorer.Chain.{
     Address,
@@ -1303,12 +1303,12 @@ defmodule Explorer.Chain.InternalTransaction do
   end
 
   @doc """
-  Fetches and formats the first internal transaction trace for the given transaction parameters from the EthereumJSONRPC.
+  Fetches and formats the first internal transaction trace for the given transaction parameters from the configured chain data backend.
 
   This function retrieves the first trace by delegating to
-  EthereumJSONRPC.fetch_first_trace and then formats the result into a
-  structure suitable for insertion into the database, including type
-  conversions and block index calculation.
+  `Explorer.ChainData.Backend.first_trace/2` and then formats the result into a
+  structure suitable for insertion into the database, including type conversions
+  and block index calculation.
 
   ## Parameters
   - `transactions_params`: List of transaction parameter maps containing
@@ -1323,7 +1323,7 @@ defmodule Explorer.Chain.InternalTransaction do
   """
   @spec fetch_first_trace(list(map()), keyword()) :: {:ok, [map()]} | {:error, term()} | :ignore
   def fetch_first_trace(transactions_params, json_rpc_named_arguments) do
-    case EthereumJSONRPC.fetch_first_trace(transactions_params, json_rpc_named_arguments) do
+    case ChainData.Backend.first_trace(transactions_params, json_rpc_named_arguments: json_rpc_named_arguments) do
       {:ok, [%{first_trace: first_trace, block_hash: block_hash, block_number: block_number}]} ->
         format_transaction_first_trace(first_trace, block_hash, block_number)
 

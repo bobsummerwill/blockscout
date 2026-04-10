@@ -24,7 +24,7 @@ defmodule Indexer.Fetcher.Scroll.Batch do
   alias ABI.{FunctionSelector, TypeDecoder}
   alias Ecto.Multi
   alias EthereumJSONRPC.Logs
-  alias Explorer.{Chain, Repo}
+  alias Explorer.{Chain, ChainData, Repo}
   alias Explorer.Chain.Block.Range, as: BlockRange
   alias Explorer.Chain.Scroll.{Batch, BatchBundle, Reader}
   alias Indexer.Fetcher.RollupL1ReorgMonitor
@@ -103,8 +103,8 @@ defmodule Indexer.Fetcher.Scroll.Batch do
          {:l1_transaction_not_found, false} <-
            {:l1_transaction_not_found, !is_nil(last_l1_transaction_hash) && is_nil(last_l1_transaction)} do
       l1_chain_id =
-        case EthereumJSONRPC.fetch_chain_id(json_rpc_named_arguments) do
-          {:ok, id} ->
+        case ChainData.Backend.chain_info(json_rpc_named_arguments: json_rpc_named_arguments) do
+          {:ok, %{chain_id: id}} ->
             id
 
           {:error, reason} ->

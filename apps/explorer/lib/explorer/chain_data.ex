@@ -46,6 +46,10 @@ defmodule Explorer.ChainData do
   @callback transactions_by_hashes([EthereumJSONRPC.hash()], opts()) ::
               {:ok, [Transaction.t() | nil], [term()]} | {:error, term()}
 
+  @callback transactions_count_by_block_numbers([EthereumJSONRPC.block_number()], opts()) ::
+              {:ok, %{transactions_count_map: %{EthereumJSONRPC.block_number() => non_neg_integer()}, errors: [term()]}}
+              | {:error, term()}
+
   @callback receipts_by_block_numbers([EthereumJSONRPC.block_number()], opts()) ::
               {:ok, Receipt.Batch.t()} | {:error, term()}
 
@@ -77,6 +81,9 @@ defmodule Explorer.ChainData do
               %{hash: EthereumJSONRPC.hash(), block_number: EthereumJSONRPC.block_number()},
               opts()
             ) ::
+              {:ok, [map()]} | {:error, term()} | :ignore
+
+  @callback first_trace([map()], opts()) ::
               {:ok, [map()]} | {:error, term()} | :ignore
 
   @callback subscribe_new_blocks(opts()) ::

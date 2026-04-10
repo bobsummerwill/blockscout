@@ -12,6 +12,7 @@ defmodule Explorer.Migrator.ReindexBlocksWithMissingTransactions do
 
   alias Explorer.Chain.{Block, Transaction}
   alias Explorer.Chain.Cache.BlockNumber
+  alias Explorer.ChainData
   alias Explorer.Migrator.{FillingMigration, MigrationStatus}
   alias Explorer.Repo
 
@@ -66,7 +67,10 @@ defmodule Explorer.Migrator.ReindexBlocksWithMissingTransactions do
 
     json_rpc_named_arguments = Application.get_env(:explorer, :json_rpc_named_arguments)
 
-    case EthereumJSONRPC.fetch_transactions_count(consensus_block_numbers, json_rpc_named_arguments) do
+    case ChainData.Backend.transactions_count_by_block_numbers(
+           consensus_block_numbers,
+           json_rpc_named_arguments: json_rpc_named_arguments
+         ) do
       {:ok, %{transactions_count_map: node_transactions_count_map, errors: errors}} ->
         if !Enum.empty?(errors) do
           Logger.warning("Migration #{@migration_name} encountered errors fetching blocks: #{inspect(errors)}")

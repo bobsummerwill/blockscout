@@ -46,6 +46,13 @@ defmodule Explorer.ChainData.Backend do
     impl().transactions_by_hashes(hashes, opts)
   end
 
+  @spec transactions_count_by_block_numbers([EthereumJSONRPC.block_number()], ChainData.opts()) ::
+          {:ok, %{transactions_count_map: %{EthereumJSONRPC.block_number() => non_neg_integer()}, errors: [term()]}}
+          | {:error, term()}
+  def transactions_count_by_block_numbers(block_numbers, opts \\ []) do
+    impl().transactions_count_by_block_numbers(block_numbers, opts)
+  end
+
   @spec receipts_by_block_numbers([EthereumJSONRPC.block_number()], ChainData.opts()) ::
           {:ok, Explorer.ChainData.Receipt.Batch.t()} | {:error, term()}
   def receipts_by_block_numbers(block_numbers, opts \\ []) do
@@ -107,6 +114,11 @@ defmodule Explorer.ChainData.Backend do
           {:ok, [map()]} | {:error, term()} | :ignore
   def raw_traces_by_transaction(transaction, opts \\ []) do
     impl().raw_traces_by_transaction(transaction, opts)
+  end
+
+  @spec first_trace([map()], ChainData.opts()) :: {:ok, [map()]} | {:error, term()} | :ignore
+  def first_trace(transactions, opts \\ []) do
+    impl().first_trace(transactions, opts)
   end
 
   @spec subscribe_new_blocks(ChainData.opts()) :: {:ok, term()} | {:error, term()} | :ignore

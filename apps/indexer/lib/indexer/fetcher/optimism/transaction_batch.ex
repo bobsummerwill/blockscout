@@ -31,7 +31,7 @@ defmodule Indexer.Fetcher.Optimism.TransactionBatch do
   alias Ecto.Multi
   alias EthereumJSONRPC.Block.ByHash
   alias EthereumJSONRPC.{Blocks, Contract}
-  alias Explorer.{Chain, Repo}
+  alias Explorer.{Chain, ChainData, Repo}
   alias Explorer.Chain.{Block, Hash}
   alias Explorer.Chain.Events.Publisher
   alias Explorer.Chain.Optimism.{FrameSequence, FrameSequenceBlob}
@@ -114,8 +114,8 @@ defmodule Indexer.Fetcher.Optimism.TransactionBatch do
       start_block = max(start_block_l1, last_l1_block_number)
 
       chain_id_l1 =
-        case EthereumJSONRPC.fetch_chain_id(json_rpc_named_arguments) do
-          {:ok, id} ->
+        case ChainData.Backend.chain_info(json_rpc_named_arguments: json_rpc_named_arguments) do
+          {:ok, %{chain_id: id}} ->
             id
 
           {:error, reason} ->

@@ -30,6 +30,9 @@ defmodule Explorer.ChainData.STRATO do
   def transactions_by_hashes(_hashes, _opts), do: @not_implemented
 
   @impl Explorer.ChainData
+  def transactions_count_by_block_numbers(_block_numbers, _opts), do: @not_implemented
+
+  @impl Explorer.ChainData
   def receipts_by_block_numbers(_block_numbers, _opts), do: @not_implemented
 
   @impl Explorer.ChainData
@@ -58,6 +61,9 @@ defmodule Explorer.ChainData.STRATO do
 
   @impl Explorer.ChainData
   def raw_traces_by_transaction(_transaction, _opts), do: :ignore
+
+  @impl Explorer.ChainData
+  def first_trace(_transactions, _opts), do: :ignore
 
   @impl Explorer.ChainData
   def subscribe_new_blocks(_opts), do: :ignore

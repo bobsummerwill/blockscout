@@ -106,6 +106,11 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
   end
 
   @impl Explorer.ChainData
+  def transactions_count_by_block_numbers(block_numbers, opts) do
+    EthereumJSONRPC.fetch_transactions_count(block_numbers, json_rpc_named_arguments(opts))
+  end
+
+  @impl Explorer.ChainData
   def receipts_by_block_numbers([], _opts), do: {:ok, %Receipt.Batch{}}
 
   @impl Explorer.ChainData
@@ -250,6 +255,11 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
   @impl Explorer.ChainData
   def raw_traces_by_transaction(transaction, opts) do
     EthereumJSONRPC.fetch_transaction_raw_traces(transaction, json_rpc_named_arguments(opts))
+  end
+
+  @impl Explorer.ChainData
+  def first_trace(transactions, opts) do
+    EthereumJSONRPC.fetch_first_trace(transactions, json_rpc_named_arguments(opts))
   end
 
   @impl Explorer.ChainData
