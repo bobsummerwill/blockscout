@@ -1,0 +1,10 @@
+{
+  "logs": [
+    {
+      "address": "0x1",
+      "transactionHash": "0xtx",
+      "blockNumber": 12,
+      "logIndex": 0
+    }
+  ]
+}

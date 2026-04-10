@@ -1,0 +1,10 @@
+{
+  "balances": [
+    {
+      "addressHash": "0xabc",
+      "blockNumber": 12,
+      "balance": "0x64"
+    }
+  ],
+  "errors": []
+}
