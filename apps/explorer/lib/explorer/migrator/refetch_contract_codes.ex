@@ -10,6 +10,7 @@ defmodule Explorer.Migrator.RefetchContractCodes do
   import Ecto.Query
 
   alias Explorer.Chain.{Address, Data, Import}
+  alias Explorer.ChainData.{Backend, Code}
   alias Explorer.Chain.Hash.Address, as: AddressHash
   alias Explorer.Chain.Import.Runner.Addresses
   alias Explorer.Migrator.FillingMigration
@@ -46,11 +47,11 @@ defmodule Explorer.Migrator.RefetchContractCodes do
     json_rpc_named_arguments = Application.get_env(:explorer, :json_rpc_named_arguments)
 
     address_hashes
-    |> Enum.map(&address_to_fetch_code_params/1)
-    |> EthereumJSONRPC.fetch_codes(json_rpc_named_arguments)
+    |> Enum.map(&address_to_fetch_code_request/1)
+    |> Backend.codes_at(json_rpc_named_arguments: json_rpc_named_arguments)
     |> case do
-      {:ok, create_address_codes} ->
-        addresses_params = create_address_codes.params_list |> Enum.map(&param_to_address/1) |> Enum.sort_by(& &1.hash)
+      {:ok, %Code.Batch{codes: codes}} ->
+        addresses_params = codes |> Enum.map(&code_to_address/1) |> Enum.sort_by(& &1.hash)
 
         Addresses.insert(Repo, addresses_params, %{
           timeout: :infinity,
@@ -68,11 +69,11 @@ defmodule Explorer.Migrator.RefetchContractCodes do
   @impl FillingMigration
   def update_cache, do: :ok
 
-  defp address_to_fetch_code_params(address_hash) do
-    %{block_quantity: "latest", address: to_string(address_hash)}
+  defp address_to_fetch_code_request(address_hash) do
+    %Code.Request{block_number: "latest", address_hash: to_string(address_hash)}
   end
 
-  defp param_to_address(%{code: bytecode, address: address_hash}) do
+  defp code_to_address(%Code{value: bytecode, address_hash: address_hash}) do
     {:ok, address_hash} = AddressHash.cast(address_hash)
     {:ok, bytecode} = Data.cast(bytecode)
     %{hash: address_hash, contract_code: bytecode, contract_code_refetched: true}

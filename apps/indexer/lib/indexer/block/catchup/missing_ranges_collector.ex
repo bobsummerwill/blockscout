@@ -64,6 +64,7 @@ defmodule Indexer.Block.Catchup.MissingRangesCollector do
   alias EthereumJSONRPC.Utility.RangesHelper
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Cache.Counters.LastFetchedCounter
+  alias Explorer.ChainData.Backend
   alias Explorer.Utility.MissingBlockRange
 
   @default_missing_ranges_batch_size 100_000
@@ -400,8 +401,8 @@ defmodule Indexer.Block.Catchup.MissingRangesCollector do
   defp fetch_max_block_number_from_node do
     json_rpc_named_arguments = Application.get_env(:indexer, :json_rpc_named_arguments)
 
-    case EthereumJSONRPC.fetch_block_number_by_tag("latest", json_rpc_named_arguments) do
-      {:ok, number} -> number
+    case Backend.block_by_tag(:latest, json_rpc_named_arguments: json_rpc_named_arguments) do
+      {:ok, %Explorer.ChainData.Block{number: number}} when is_integer(number) -> number
       _ -> 0
     end
   end

@@ -16,6 +16,7 @@ defmodule Mix.Tasks.FetchCeloCoreContracts do
 
   alias EthereumJSONRPC.Logs
   alias Explorer.Chain.Cache.CeloCoreContracts
+  alias Explorer.ChainData.Backend
   alias Indexer.Helper, as: IndexerHelper
 
   @registry_proxy_contract_address "0x000000000000000000000000000000000000ce10"
@@ -33,7 +34,8 @@ defmodule Mix.Tasks.FetchCeloCoreContracts do
     atom_to_contract_name = CeloCoreContracts.atom_to_contract_name()
     atom_to_contract_event_names = CeloCoreContracts.atom_to_contract_event_names()
     contract_names = atom_to_contract_name |> Map.values()
-    {:ok, latest_block_number} = EthereumJSONRPC.fetch_block_number_by_tag("latest", json_rpc_named_arguments)
+    {:ok, %Explorer.ChainData.Block{number: latest_block_number}} =
+      Backend.block_by_tag(:latest, json_rpc_named_arguments: json_rpc_named_arguments)
 
     core_contract_addresses =
       0..latest_block_number

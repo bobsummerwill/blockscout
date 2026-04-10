@@ -21,6 +21,8 @@ defmodule Indexer.Fetcher.Celo.ValidatorGroupVotes do
 
   require Logger
 
+  alias Explorer.ChainData.Backend
+
   @last_fetched_block_key "celo_validator_group_votes_last_fetched_block_number"
 
   @max_request_retries 3
@@ -75,10 +77,10 @@ defmodule Indexer.Fetcher.Celo.ValidatorGroupVotes do
         } = state
       ) do
     {:ok, latest_block_number} =
-      EthereumJSONRPC.fetch_block_number_by_tag(
-        "latest",
-        json_rpc_named_arguments
-      )
+      case Backend.block_by_tag(:latest, json_rpc_named_arguments: json_rpc_named_arguments) do
+        {:ok, %Explorer.ChainData.Block{number: latest_block_number}} -> {:ok, latest_block_number}
+        other -> other
+      end
 
     Logger.info("Fetching votes up to latest block number #{latest_block_number}")
 

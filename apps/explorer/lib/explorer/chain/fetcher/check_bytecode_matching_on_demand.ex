@@ -8,6 +8,7 @@ defmodule Explorer.Chain.Fetcher.CheckBytecodeMatchingOnDemand do
   alias Ecto.Association.NotLoaded
   alias Ecto.Changeset
   alias Explorer.Chain.Events.Publisher
+  alias Explorer.ChainData.{Backend, Code}
   alias Explorer.Repo
   alias Explorer.Utility.RateLimiter
 
@@ -36,12 +37,12 @@ defmodule Explorer.Chain.Fetcher.CheckBytecodeMatchingOnDemand do
              address.smart_contract.bytecode_checked_at
              |> DateTime.add(@check_bytecode_interval, :second)
              |> DateTime.compare(now) != :gt,
-         {:ok, %EthereumJSONRPC.FetchedCodes{params_list: fetched_codes}} <-
-           EthereumJSONRPC.fetch_codes(
-             [%{block_quantity: "latest", address: address.smart_contract.address_hash}],
-             json_rpc_named_arguments
+         {:ok, %Code.Batch{codes: fetched_codes}} <-
+           Backend.codes_at(
+             [%Code.Request{block_number: "latest", address_hash: address.smart_contract.address_hash}],
+             json_rpc_named_arguments: json_rpc_named_arguments
            ),
-         bytecode_from_node <- fetched_codes |> List.first() |> Map.get(:code),
+         bytecode_from_node <- fetched_codes |> List.first() |> Map.get(:value),
          bytecode_from_db <- "0x" <> (address.contract_code.bytes |> Base.encode16(case: :lower)),
          {:changed, true} <- {:changed, bytecode_from_node == bytecode_from_db} do
       {:ok, _} =

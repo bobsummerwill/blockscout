@@ -6,12 +6,11 @@ defmodule Explorer.Chain.Supply.RSK do
   use Explorer.Chain.Supply
 
   import Ecto.Query, only: [from: 2, subquery: 1]
-  import EthereumJSONRPC, only: [integer_to_quantity: 1]
 
-  alias EthereumJSONRPC.FetchedBalances
   alias Explorer.Chain.Address.CoinBalance
   alias Explorer.Chain.{Block, Wei}
   alias Explorer.Chain.Cache.BlockNumber
+  alias Explorer.ChainData.{Backend, Balance}
   alias Explorer.Repo
 
   @cache_name :rsk_balance
@@ -107,18 +106,16 @@ defmodule Explorer.Chain.Supply.RSK do
   defp fetch_circulating_value do
     max_number = BlockNumber.get_max()
 
-    params = [
-      %{block_quantity: integer_to_quantity(max_number), hash_data: @rsk_bridge_contract_address}
-    ]
+    requests = [%Balance.Request{block_number: max_number, address_hash: @rsk_bridge_contract_address}]
 
     json_rpc_named_arguments = Application.get_env(:explorer, :json_rpc_named_arguments)
 
-    case EthereumJSONRPC.fetch_balances(params, json_rpc_named_arguments, max_number) do
+    case Backend.balances_at(requests, json_rpc_named_arguments: json_rpc_named_arguments) do
       {:ok,
-       %FetchedBalances{
+       %Balance.Batch{
          errors: [],
-         params_list: [
-           %{
+         balances: [
+           %Balance{
              address_hash: @rsk_bridge_contract_address,
              value: value
            }

@@ -6,9 +6,9 @@ defmodule Explorer.ChainSpec.Parity.Importer do
 
   require Logger
 
-  alias EthereumJSONRPC.Blocks
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Block.{EmissionReward, Range}
+  alias Explorer.ChainData.Backend
   alias Explorer.Chain.Hash.Address, as: AddressHash
   alias Explorer.Chain.Wei
   alias Explorer.ChainSpec.GenesisData
@@ -38,8 +38,8 @@ defmodule Explorer.ChainSpec.Parity.Importer do
 
     json_rpc_named_arguments = Application.get_env(:explorer, :json_rpc_named_arguments)
 
-    {:ok, %Blocks{blocks_params: [%{timestamp: timestamp}]}} =
-      EthereumJSONRPC.fetch_blocks_by_range(1..1, json_rpc_named_arguments)
+    {:ok, %Explorer.ChainData.BlockBatch{blocks: [%Explorer.ChainData.Block{timestamp: timestamp}]}} =
+      Backend.blocks_by_range(1..1, true, json_rpc_named_arguments: json_rpc_named_arguments)
 
     day = DateTime.to_date(timestamp)
 

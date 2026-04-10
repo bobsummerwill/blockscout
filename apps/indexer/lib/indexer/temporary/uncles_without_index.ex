@@ -16,6 +16,7 @@ defmodule Indexer.Temporary.UnclesWithoutIndex do
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Block.SecondDegreeRelation
   alias Explorer.Chain.Cache.Uncles
+  alias Explorer.ChainData.{Backend, BlockBatch}
   alias Indexer.{BufferedTask, Tracer}
   alias Indexer.Fetcher.UncleBlock
 
@@ -77,9 +78,9 @@ defmodule Indexer.Temporary.UnclesWithoutIndex do
 
     Logger.debug("fetching")
 
-    case EthereumJSONRPC.fetch_blocks_by_hash(hashes, json_rpc_named_arguments) do
-      {:ok, blocks} ->
-        run_blocks(blocks, hashes)
+    case Backend.blocks_by_hashes(hashes, true, json_rpc_named_arguments: json_rpc_named_arguments) do
+      {:ok, fetched_block_batch} ->
+        run_blocks(block_batch_to_fetched_blocks(fetched_block_batch), hashes)
 
       {:error, reason} ->
         Logger.error(
@@ -114,6 +115,22 @@ defmodule Indexer.Temporary.UnclesWithoutIndex do
 
         {:retry, original_entries}
     end
+  end
+
+  defp block_batch_to_fetched_blocks(%BlockBatch{} = fetched_block_batch) do
+    %Blocks{
+      blocks_params: Map.get(fetched_block_batch.raw, :blocks_params, Enum.map(fetched_block_batch.blocks, & &1.raw)),
+      transactions_params:
+        Map.get(fetched_block_batch.raw, :transactions_params, Enum.map(fetched_block_batch.transactions, & &1.raw)),
+      withdrawals_params: Map.get(fetched_block_batch.raw, :withdrawals_params, fetched_block_batch.withdrawals),
+      block_second_degree_relations_params:
+        Map.get(
+          fetched_block_batch.raw,
+          :block_second_degree_relations_params,
+          fetched_block_batch.second_degree_relations
+        ),
+      errors: fetched_block_batch.errors
+    }
   end
 
   defp retry([]), do: :ok

@@ -16,8 +16,10 @@ defmodule Explorer.Chain.Cache.ChainId do
     key: :id
 
   defp handle_fallback(:id) do
-    case EthereumJSONRPC.fetch_chain_id(Application.get_env(:explorer, :json_rpc_named_arguments)) do
-      {:ok, value} ->
+    case Explorer.ChainData.Backend.chain_info(
+           json_rpc_named_arguments: Application.get_env(:explorer, :json_rpc_named_arguments)
+         ) do
+      {:ok, %{chain_id: value}} when not is_nil(value) ->
         {:update, value}
 
       {:error, reason} ->
@@ -38,6 +40,9 @@ defmodule Explorer.Chain.Cache.ChainId do
           end
 
         {:return, return}
+
+      {:ok, _} ->
+        {:return, nil}
     end
   end
 
