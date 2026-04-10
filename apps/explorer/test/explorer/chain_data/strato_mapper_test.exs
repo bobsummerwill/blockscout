@@ -20,6 +20,10 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
   @transactions_count_payload fixture("transactions_count_by_block_numbers.json")
 
   describe "chain_info/1" do
+    test "returns an explicit error for missing payloads" do
+      assert {:error, :missing_chain_info} = Mapper.chain_info(nil)
+    end
+
     test "parses camelCase payloads into canonical chain info" do
       assert {:ok, %{chain_id: 1516, head: 42, safe_head: 40}} =
                Mapper.chain_info(%{
@@ -31,6 +35,10 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
   end
 
   describe "block_batch/1" do
+    test "returns an empty batch for nil payloads" do
+      assert %{blocks: [], transactions: [], errors: []} = Mapper.block_batch(nil)
+    end
+
     test "maps blocks and nested transactions into canonical DTOs" do
       batch = Mapper.block_batch(@blocks_by_range_payload)
 
@@ -49,9 +57,20 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
                transactions: [%Transaction{hash: "0xtx1", block_number: 16, type: 2, status: :ok}]
              } = batch
     end
+
+    test "tolerates sparse block payloads" do
+      assert %{
+               blocks: [%Block{hash: "0xsparse", number: nil, transactions: []}],
+               transactions: []
+             } = Mapper.block_batch(%{"blocks" => [%{"hash" => "0xsparse"}]})
+    end
   end
 
   describe "receipt_batch/1" do
+    test "returns an empty receipt batch for nil payloads" do
+      assert %{receipts: [], logs: [], errors: []} = Mapper.receipt_batch(nil)
+    end
+
     test "associates logs with their receipt" do
       batch = Mapper.receipt_batch(@receipts_payload)
 
@@ -92,6 +111,10 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
   end
 
   describe "transactions_count/1" do
+    test "returns an empty count map for nil payloads" do
+      assert {:ok, %{transactions_count_map: %{}, errors: []}} = Mapper.transactions_count(nil)
+    end
+
     test "normalizes mixed-format count maps" do
       assert {:ok, %{transactions_count_map: %{10 => 2, 11 => 0}, errors: []}} =
                Mapper.transactions_count(@transactions_count_payload)
