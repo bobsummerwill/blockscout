@@ -20,6 +20,27 @@ config :explorer,
 
 config :explorer, Explorer.ChainData, backend: Explorer.ChainData.EthereumJSONRPC
 
+config :explorer, Explorer.ChainData.STRATO,
+  http_client: Explorer.HttpClient,
+  base_url: nil,
+  recv_timeout: :timer.seconds(30),
+  connect_timeout: :timer.seconds(5),
+  endpoints: [
+    chain_info: "/chain-info",
+    block_by_tag: "/blocks/by-tag",
+    blocks_by_range: "/blocks/range",
+    blocks_by_numbers: "/blocks/by-number",
+    blocks_by_hashes: "/blocks/by-hash",
+    transactions_by_hashes: "/transactions/by-hash",
+    transactions_count_by_block_numbers: "/transactions/count/by-block-number",
+    receipts_by_block_numbers: "/receipts/by-block-number",
+    receipts_by_transaction_hashes: "/receipts/by-transaction-hash",
+    logs_search: "/logs/search",
+    state_balances: "/state/balances",
+    state_nonces: "/state/nonces",
+    state_codes: "/state/codes"
+  ]
+
 config :explorer, Explorer.ChainSpec.GenesisData, enabled: true
 
 config :explorer, Explorer.Chain.Cache.BlockNumber, enabled: true

@@ -1,54 +1,62 @@
 defmodule Explorer.ChainData.STRATO do
   @moduledoc """
-  Placeholder `Explorer.ChainData` implementation for a future STRATO-native
-  backend.
+  `Explorer.ChainData` implementation backed by STRATO-native private explorer
+  endpoints.
 
-  The first PR only introduces the backend seam. A later change will implement
-  these callbacks against STRATO APIs and indexed data sources.
+  The initial implementation targets the first read-only slice needed by the
+  Blockscout indexer and explorer: chain info, blocks, transactions, receipts,
+  logs, and historical state reads. Trace and contract-call paths remain
+  intentionally unimplemented until the corresponding STRATO services exist.
   """
 
   @behaviour Explorer.ChainData
 
-  @not_implemented {:error, :not_implemented}
+  alias Explorer.ChainData.STRATO.{
+    Blocks,
+    Logs,
+    Receipts,
+    State,
+    Transactions
+  }
 
   @impl Explorer.ChainData
-  def chain_info(_opts), do: @not_implemented
+  def chain_info(opts), do: Blocks.chain_info(opts)
 
   @impl Explorer.ChainData
-  def block_by_tag(_tag, _opts), do: @not_implemented
+  def block_by_tag(tag, opts), do: Blocks.block_by_tag(tag, opts)
 
   @impl Explorer.ChainData
-  def blocks_by_range(_range, _hydrated?, _opts), do: @not_implemented
+  def blocks_by_range(range, hydrated?, opts), do: Blocks.blocks_by_range(range, hydrated?, opts)
 
   @impl Explorer.ChainData
-  def blocks_by_numbers(_block_numbers, _hydrated?, _opts), do: @not_implemented
+  def blocks_by_numbers(block_numbers, hydrated?, opts), do: Blocks.blocks_by_numbers(block_numbers, hydrated?, opts)
 
   @impl Explorer.ChainData
-  def blocks_by_hashes(_hashes, _hydrated?, _opts), do: @not_implemented
+  def blocks_by_hashes(hashes, hydrated?, opts), do: Blocks.blocks_by_hashes(hashes, hydrated?, opts)
 
   @impl Explorer.ChainData
-  def transactions_by_hashes(_hashes, _opts), do: @not_implemented
+  def transactions_by_hashes(hashes, opts), do: Transactions.by_hashes(hashes, opts)
 
   @impl Explorer.ChainData
-  def transactions_count_by_block_numbers(_block_numbers, _opts), do: @not_implemented
+  def transactions_count_by_block_numbers(block_numbers, opts), do: Transactions.counts_by_block_numbers(block_numbers, opts)
 
   @impl Explorer.ChainData
-  def receipts_by_block_numbers(_block_numbers, _opts), do: @not_implemented
+  def receipts_by_block_numbers(block_numbers, opts), do: Receipts.by_block_numbers(block_numbers, opts)
 
   @impl Explorer.ChainData
-  def receipts_by_transaction_hashes(_hashes, _opts), do: @not_implemented
+  def receipts_by_transaction_hashes(hashes, opts), do: Receipts.by_transaction_hashes(hashes, opts)
 
   @impl Explorer.ChainData
-  def logs(_query, _opts), do: @not_implemented
+  def logs(query, opts), do: Logs.search(query, opts)
 
   @impl Explorer.ChainData
-  def balances_at(_requests, _opts), do: @not_implemented
+  def balances_at(requests, opts), do: State.balances(requests, opts)
 
   @impl Explorer.ChainData
-  def nonces_at(_requests, _opts), do: @not_implemented
+  def nonces_at(requests, opts), do: State.nonces(requests, opts)
 
   @impl Explorer.ChainData
-  def codes_at(_requests, _opts), do: @not_implemented
+  def codes_at(requests, opts), do: State.codes(requests, opts)
 
   @impl Explorer.ChainData
   def contract_calls(_requests, _abi, _leave_error_as_map, _opts), do: []
