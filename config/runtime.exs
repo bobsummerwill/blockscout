@@ -297,6 +297,17 @@ disable_exchange_rates? =
 
 coin = System.get_env("COIN") || "ETH"
 
+chain_data_backend =
+  ConfigHelper.parse_catalog_map_value(
+    "CHAIN_DATA_BACKEND",
+    %{
+      "ethereum_jsonrpc" => Explorer.ChainData.EthereumJSONRPC,
+      "strato" => Explorer.ChainData.STRATO
+    },
+    false,
+    "ethereum_jsonrpc"
+  ) || Explorer.ChainData.EthereumJSONRPC
+
 config :explorer,
   mode: app_mode,
   ecto_repos: ConfigHelper.repos(),
@@ -327,6 +338,23 @@ config :explorer,
   shrink_internal_transactions_enabled: ConfigHelper.parse_bool_env_var("SHRINK_INTERNAL_TRANSACTIONS_ENABLED"),
   replica_max_lag: ConfigHelper.parse_time_env_var("REPLICA_MAX_LAG", "5m"),
   hackney_default_pool_size: ConfigHelper.parse_integer_env_var("HACKNEY_DEFAULT_POOL_SIZE", 1_000)
+
+config :explorer, Explorer.ChainData, backend: chain_data_backend
+
+strato_api_url =
+  ConfigHelper.parse_url_env_var("STRATO_API_URL") || ConfigHelper.parse_url_env_var("STRATO_PRIVATE_API_URL")
+
+config :explorer, Explorer.ChainData.STRATO,
+  profile:
+    ConfigHelper.parse_catalog_value(
+      "STRATO_API_PROFILE",
+      ["private_explorer_api", "core_api"],
+      false,
+      "private_explorer_api"
+    ) || "private_explorer_api",
+  base_url: strato_api_url,
+  recv_timeout: ConfigHelper.parse_time_env_var("STRATO_PRIVATE_API_RECV_TIMEOUT", "30s"),
+  connect_timeout: ConfigHelper.parse_time_env_var("STRATO_PRIVATE_API_CONNECT_TIMEOUT", "5s")
 
 config :explorer, Explorer.Chain.Health.Monitor,
   check_interval: ConfigHelper.parse_time_env_var("HEALTH_MONITOR_CHECK_INTERVAL", "1m"),

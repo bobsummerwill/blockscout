@@ -1,12 +1,16 @@
 defmodule Explorer.ChainData.STRATO do
   @moduledoc """
-  `Explorer.ChainData` implementation backed by STRATO-native private explorer
-  endpoints.
+  `Explorer.ChainData` implementation backed by STRATO-native APIs.
 
-  The initial implementation targets the first read-only slice needed by the
-  Blockscout indexer and explorer: chain info, blocks, transactions, receipts,
-  logs, and historical state reads. Trace and contract-call paths remain
-  intentionally unimplemented until the corresponding STRATO services exist.
+  Two profiles are supported:
+
+  * `:private_explorer_api` for a Blockscout-oriented aggregated STRATO API.
+  * `:core_api` for STRATO's existing `/eth/v1.2` query-style API.
+
+  The private explorer profile covers the fuller read-only slice needed by the
+  Blockscout indexer and explorer. The core API profile only maps the subset
+  STRATO currently exposes directly, and returns explicit unsupported errors
+  for explorer-grade receipts, logs, and contract bytecode reads.
   """
 
   @behaviour Explorer.ChainData

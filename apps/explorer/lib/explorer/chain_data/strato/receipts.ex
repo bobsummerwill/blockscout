@@ -8,9 +8,15 @@ defmodule Explorer.ChainData.STRATO.Receipts do
   def by_block_numbers(block_numbers, opts) do
     config = Config.get(opts)
 
-    with {:ok, payload} <-
-           Client.post(Config.endpoint(:receipts_by_block_numbers, config), %{block_numbers: block_numbers}, opts) do
-      {:ok, Mapper.receipt_batch(payload)}
+    case Config.profile(config) do
+      :core_api ->
+        {:error, {:unsupported_by_strato_core_api, :receipts_by_block_numbers, block_numbers}}
+
+      :private_explorer_api ->
+        with {:ok, payload} <-
+               Client.post(Config.endpoint(:receipts_by_block_numbers, config), %{block_numbers: block_numbers}, opts) do
+          {:ok, Mapper.receipt_batch(payload)}
+        end
     end
   end
 
@@ -19,9 +25,15 @@ defmodule Explorer.ChainData.STRATO.Receipts do
   def by_transaction_hashes(hashes, opts) do
     config = Config.get(opts)
 
-    with {:ok, payload} <-
-           Client.post(Config.endpoint(:receipts_by_transaction_hashes, config), %{hashes: hashes}, opts) do
-      {:ok, Mapper.receipt_batch(payload)}
+    case Config.profile(config) do
+      :core_api ->
+        {:error, {:unsupported_by_strato_core_api, :receipts_by_transaction_hashes, hashes}}
+
+      :private_explorer_api ->
+        with {:ok, payload} <-
+               Client.post(Config.endpoint(:receipts_by_transaction_hashes, config), %{hashes: hashes}, opts) do
+          {:ok, Mapper.receipt_batch(payload)}
+        end
     end
   end
 end

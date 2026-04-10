@@ -32,6 +32,14 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
                  "safeHead" => 40
                })
     end
+
+    test "parses STRATO metadata payloads via networkID" do
+      assert {:ok, %{chain_id: 1516, head: 42, safe_head: nil}} =
+               Mapper.chain_info(%{
+                 "networkID" => "1516",
+                 "head" => 42
+               })
+    end
   end
 
   describe "block_batch/1" do
@@ -63,6 +71,50 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
                blocks: [%Block{hash: "0xsparse", number: nil, transactions: []}],
                transactions: []
              } = Mapper.block_batch(%{"blocks" => [%{"hash" => "0xsparse"}]})
+    end
+
+    test "maps STRATO core API blocks with nested blockData and receiptTransactions" do
+      batch =
+        Mapper.block_batch([
+          %{
+            "blockHash" => "0xcoreblock",
+            "blockData" => %{
+              "parentHash" => "0xparent",
+              "coinbase" => "0xminer",
+              "number" => 42,
+              "gasLimit" => 30_000_000,
+              "gasUsed" => 21_000,
+              "timestamp" => "2024-01-01T00:00:00Z",
+              "nonce" => 7,
+              "difficulty" => 9
+            },
+            "receiptTransactions" => [
+              %{
+                "hash" => "0xcoretx",
+                "from" => "0xfrom",
+                "to" => "0xto",
+                "blockNumber" => 42,
+                "gasLimit" => 21_000,
+                "gasPrice" => 4,
+                "value" => 5,
+                "txData" => [1, 2, 255]
+              }
+            ]
+          }
+        ])
+
+      assert %{
+               blocks: [
+                 %Block{
+                   hash: "0xcoreblock",
+                   number: 42,
+                   parent_hash: "0xparent",
+                   miner_hash: "0xminer",
+                   transactions: [%Transaction{hash: "0xcoretx", input: "0x0102ff"}]
+                 }
+               ],
+               transactions: [%Transaction{hash: "0xcoretx", gas: 21_000, gas_price: 4}]
+             } = batch
     end
   end
 
@@ -107,6 +159,27 @@ defmodule Explorer.ChainData.STRATO.MapperTest do
                codes: [%Explorer.ChainData.Code{address_hash: "0xabc", block_number: 32, value: "0x6000"}],
                errors: []
              } = Mapper.code_batch(@codes_payload)
+    end
+
+    test "maps STRATO account payloads into balances and nonces" do
+      account_payload = %{
+        "balances" => [
+          %{"address" => "0xabc", "latestBlockNum" => 32, "balance" => "15"}
+        ],
+        "nonces" => [
+          %{"address" => "0xabc", "latestBlockNum" => 32, "nonce" => 8}
+        ]
+      }
+
+      assert %{
+               balances: [%Balance{address_hash: "0xabc", block_number: 32, value: 15}],
+               errors: []
+             } = Mapper.balance_batch(account_payload)
+
+      assert %{
+               nonces: [%Nonce{address_hash: "0xabc", block_number: 32, value: 8}],
+               errors: []
+             } = Mapper.nonce_batch(account_payload)
     end
   end
 

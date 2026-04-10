@@ -18,7 +18,7 @@ defmodule Explorer.ChainData.STRATO.Mapper do
   def chain_info(payload) when is_map(payload) do
     {:ok,
      %{
-       chain_id: parse_integer(field(payload, ["chain_id", "chainId"])) || 0,
+       chain_id: parse_integer(field(payload, ["chain_id", "chainId", "networkID"])) || 0,
        head: parse_integer(field(payload, ["head", "head_block_number", "headBlockNumber"])),
        safe_head: parse_integer(field(payload, ["safe_head", "safeHead", "safe_block_number", "safeBlockNumber"]))
      }}
@@ -164,27 +164,33 @@ defmodule Explorer.ChainData.STRATO.Mapper do
   end
 
   defp to_block(payload) do
+    block_data = field(payload, ["blockData"]) || %{}
+
     nested_transactions =
       payload
-      |> field(["transactions"])
+      |> field(["transactions", "receiptTransactions"])
       |> list_of_maps()
       |> Enum.map(&to_transaction/1)
 
     %Block{
       hash: field(payload, ["hash", "block_hash", "blockHash"]),
-      number: parse_integer(field(payload, ["number", "block_number", "blockNumber"])),
-      parent_hash: field(payload, ["parent_hash", "parentHash"]),
-      timestamp: parse_datetime(field(payload, ["timestamp", "block_timestamp", "blockTimestamp"])),
-      miner_hash: field(payload, ["miner_hash", "minerHash", "beneficiary_hash", "beneficiaryHash"]),
-      gas_limit: parse_integer(field(payload, ["gas_limit", "gasLimit"])),
-      gas_used: parse_integer(field(payload, ["gas_used", "gasUsed"])),
+      number: parse_integer(field(payload, ["number", "block_number", "blockNumber"])) || parse_integer(field(block_data, ["number"])),
+      parent_hash: field(payload, ["parent_hash", "parentHash"]) || field(block_data, ["parentHash"]),
+      timestamp:
+        parse_datetime(field(payload, ["timestamp", "block_timestamp", "blockTimestamp"])) ||
+          parse_datetime(field(block_data, ["timestamp"])),
+      miner_hash:
+        field(payload, ["miner_hash", "minerHash", "beneficiary_hash", "beneficiaryHash"]) ||
+          field(block_data, ["coinbase"]),
+      gas_limit: parse_integer(field(payload, ["gas_limit", "gasLimit"])) || parse_integer(field(block_data, ["gasLimit"])),
+      gas_used: parse_integer(field(payload, ["gas_used", "gasUsed"])) || parse_integer(field(block_data, ["gasUsed"])),
       size: parse_integer(field(payload, ["size"])),
-      nonce: parse_integer(field(payload, ["nonce"])),
-      difficulty: parse_integer(field(payload, ["difficulty"])),
+      nonce: parse_integer(field(payload, ["nonce"])) || parse_integer(field(block_data, ["nonce"])),
+      difficulty: parse_integer(field(payload, ["difficulty"])) || parse_integer(field(block_data, ["difficulty"])),
       total_difficulty: parse_integer(field(payload, ["total_difficulty", "totalDifficulty"])),
       base_fee_per_gas: parse_integer(field(payload, ["base_fee_per_gas", "baseFeePerGas"])),
       transactions: nested_transactions,
-      uncles: field(payload, ["uncles"]) || [],
+      uncles: field(payload, ["uncles", "blockUncles"]) || [],
       withdrawals: field(payload, ["withdrawals"]) || [],
       raw: payload
     }
@@ -206,12 +212,12 @@ defmodule Explorer.ChainData.STRATO.Mapper do
           "contractAddress"
         ]),
       value: parse_integer(field(payload, ["value"])),
-      gas: parse_integer(field(payload, ["gas"])),
+      gas: parse_integer(field(payload, ["gas", "gasLimit"])),
       gas_price: parse_integer(field(payload, ["gas_price", "gasPrice"])),
       max_fee_per_gas: parse_integer(field(payload, ["max_fee_per_gas", "maxFeePerGas"])),
       max_priority_fee_per_gas:
         parse_integer(field(payload, ["max_priority_fee_per_gas", "maxPriorityFeePerGas"])),
-      input: field(payload, ["input", "data"]),
+      input: field(payload, ["input", "data"]) || tx_data_to_input(field(payload, ["txData"])),
       nonce: parse_integer(field(payload, ["nonce"])),
       type: parse_integer(field(payload, ["type"])),
       status: parse_status(field(payload, ["status"])),
@@ -259,7 +265,7 @@ defmodule Explorer.ChainData.STRATO.Mapper do
   defp to_balance(payload) do
     %Balance{
       address_hash: field(payload, ["address_hash", "address", "addressHash"]),
-      block_number: parse_integer(field(payload, ["block_number", "blockNumber"])),
+      block_number: parse_integer(field(payload, ["block_number", "blockNumber", "latestBlockNum"])),
       value: parse_integer(field(payload, ["value", "balance"]))
     }
   end
@@ -267,7 +273,7 @@ defmodule Explorer.ChainData.STRATO.Mapper do
   defp to_nonce(payload) do
     %Nonce{
       address_hash: field(payload, ["address_hash", "address", "addressHash"]),
-      block_number: parse_integer(field(payload, ["block_number", "blockNumber"])),
+      block_number: parse_integer(field(payload, ["block_number", "blockNumber", "latestBlockNum"])),
       value: parse_integer(field(payload, ["value", "nonce"]))
     }
   end
@@ -344,4 +350,17 @@ defmodule Explorer.ChainData.STRATO.Mapper do
   defp parse_status(value) when value in [1, "1", "0x1", true, :ok, "ok", "success", "succeeded"], do: :ok
   defp parse_status(value) when value in [0, "0", "0x0", false, :error, "error", "failed", "failure"], do: :error
   defp parse_status(_value), do: nil
+
+  defp tx_data_to_input(nil), do: nil
+
+  defp tx_data_to_input(data) when is_list(data) do
+    encoded =
+      data
+      |> Enum.map(fn byte -> byte |> Integer.to_string(16) |> String.pad_leading(2, "0") end)
+      |> Enum.join()
+
+    "0x" <> encoded
+  end
+
+  defp tx_data_to_input(_data), do: nil
 end

@@ -8,8 +8,14 @@ defmodule Explorer.ChainData.STRATO.Logs do
   def search(%Query{} = query, opts) do
     config = Config.get(opts)
 
-    with {:ok, payload} <- Client.post(Config.endpoint(:logs_search, config), query_to_body(query), opts) do
-      Mapper.logs(payload)
+    case Config.profile(config) do
+      :core_api ->
+        {:error, {:unsupported_by_strato_core_api, :logs_search, query}}
+
+      :private_explorer_api ->
+        with {:ok, payload} <- Client.post(Config.endpoint(:logs_search, config), query_to_body(query), opts) do
+          Mapper.logs(payload)
+        end
     end
   end
 
