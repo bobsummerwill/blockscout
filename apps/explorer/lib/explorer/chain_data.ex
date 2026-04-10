@@ -37,6 +37,9 @@ defmodule Explorer.ChainData do
   @callback blocks_by_range(Range.t(), boolean(), opts()) ::
               {:ok, BlockBatch.t()} | {:error, term()}
 
+  @callback blocks_by_numbers([EthereumJSONRPC.block_number()], boolean(), opts()) ::
+              {:ok, BlockBatch.t()} | {:error, term()}
+
   @callback blocks_by_hashes([EthereumJSONRPC.hash()], boolean(), opts()) ::
               {:ok, BlockBatch.t()} | {:error, term()}
 

@@ -11,6 +11,7 @@ defmodule Indexer.Fetcher.RootstockData do
 
   alias EthereumJSONRPC.Blocks
   alias Explorer.Chain.Block
+  alias Explorer.ChainData.{Backend, BlockBatch}
   alias Explorer.Repo
 
   @interval :timer.seconds(3)
@@ -92,10 +93,10 @@ defmodule Indexer.Fetcher.RootstockData do
         blocks_to_fetch
         |> Stream.chunk_every(batch_size)
         |> Task.async_stream(
-          &{EthereumJSONRPC.fetch_blocks_by_numbers(
+          &{Backend.blocks_by_numbers(
              Enum.map(&1, fn b -> b.number end),
-             json_rpc_named_arguments,
-             false
+             false,
+             json_rpc_named_arguments: json_rpc_named_arguments
            ), &1},
           max_concurrency: concurrency,
           timeout: :infinity,
@@ -146,6 +147,10 @@ defmodule Indexer.Fetcher.RootstockData do
     end
   end
 
+  defp fetch_reducer({:ok, {{:ok, %BlockBatch{} = fetched_block_batch}, blocks}}, acc) do
+    fetch_reducer({:ok, {{:ok, block_batch_to_fetched_blocks(fetched_block_batch)}, blocks}}, acc)
+  end
+
   defp fetch_reducer({:ok, {{:ok, %Blocks{blocks_params: block_params}}, blocks}}, acc) do
     blocks_map = Map.new(blocks, fn b -> {b.number, b} end)
 
@@ -166,5 +171,21 @@ defmodule Indexer.Fetcher.RootstockData do
   defp fetch_reducer({:exit, {blocks, reason}}, acc) do
     Logger.error("failed to fetch: " <> inspect(reason) <> ". Retrying.")
     [blocks | acc] |> List.flatten()
+  end
+
+  defp block_batch_to_fetched_blocks(%BlockBatch{} = fetched_block_batch) do
+    %Blocks{
+      blocks_params: Map.get(fetched_block_batch.raw, :blocks_params, Enum.map(fetched_block_batch.blocks, & &1.raw)),
+      transactions_params:
+        Map.get(fetched_block_batch.raw, :transactions_params, Enum.map(fetched_block_batch.transactions, & &1.raw)),
+      withdrawals_params: Map.get(fetched_block_batch.raw, :withdrawals_params, fetched_block_batch.withdrawals),
+      block_second_degree_relations_params:
+        Map.get(
+          fetched_block_batch.raw,
+          :block_second_degree_relations_params,
+          fetched_block_batch.second_degree_relations
+        ),
+      errors: fetched_block_batch.errors
+    }
   end
 end

@@ -213,8 +213,8 @@ defmodule Indexer.Fetcher.InternalTransaction do
     first_block = Application.get_env(:indexer, :trace_first_block)
 
     if first_block in block_numbers do
-      case EthereumJSONRPC.fetch_blocks_by_numbers([first_block], json_rpc_named_arguments) do
-        {:ok, %{transactions_params: [_ | _]}} -> block_numbers
+      case Backend.blocks_by_numbers([first_block], true, json_rpc_named_arguments: json_rpc_named_arguments) do
+        {:ok, %Explorer.ChainData.BlockBatch{transactions: [_ | _]}} -> block_numbers
         _ -> block_numbers -- [first_block]
       end
     else

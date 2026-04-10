@@ -21,6 +21,9 @@ defmodule Explorer.ChainData.STRATO do
   def blocks_by_range(_range, _hydrated?, _opts), do: @not_implemented
 
   @impl Explorer.ChainData
+  def blocks_by_numbers(_block_numbers, _hydrated?, _opts), do: @not_implemented
+
+  @impl Explorer.ChainData
   def blocks_by_hashes(_hashes, _hydrated?, _opts), do: @not_implemented
 
   @impl Explorer.ChainData

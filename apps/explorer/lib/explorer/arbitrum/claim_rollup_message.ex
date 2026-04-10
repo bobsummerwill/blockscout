@@ -679,14 +679,13 @@ defmodule Explorer.Arbitrum.ClaimRollupMessage do
         Map.get(block, :send_count)
 
       {:error, _} ->
-        case EthereumJSONRPC.fetch_blocks_by_hash(
+        case Explorer.ChainData.Backend.blocks_by_hashes(
                [Hash.to_string(l2_block_hash)],
-               json_l2_rpc_named_arguments,
-               false
+               false,
+               json_rpc_named_arguments: json_l2_rpc_named_arguments
              ) do
-          {:ok, blocks} ->
-            blocks.blocks_params
-            |> hd()
+          {:ok, %Explorer.ChainData.BlockBatch{blocks: [block | _]}} ->
+            block.raw
             |> Map.get(:send_count)
 
           {:error, error} ->

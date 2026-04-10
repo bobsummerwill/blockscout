@@ -28,6 +28,12 @@ defmodule Explorer.ChainData.Backend do
     impl().blocks_by_range(range, hydrated?, opts)
   end
 
+  @spec blocks_by_numbers([EthereumJSONRPC.block_number()], boolean(), ChainData.opts()) ::
+          {:ok, Explorer.ChainData.BlockBatch.t()} | {:error, term()}
+  def blocks_by_numbers(block_numbers, hydrated? \\ true, opts \\ []) do
+    impl().blocks_by_numbers(block_numbers, hydrated?, opts)
+  end
+
   @spec blocks_by_hashes([EthereumJSONRPC.hash()], boolean(), ChainData.opts()) ::
           {:ok, Explorer.ChainData.BlockBatch.t()} | {:error, term()}
   def blocks_by_hashes(hashes, hydrated? \\ true, opts \\ []) do

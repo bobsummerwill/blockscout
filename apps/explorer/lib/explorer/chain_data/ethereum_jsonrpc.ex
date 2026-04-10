@@ -53,6 +53,14 @@ defmodule Explorer.ChainData.EthereumJSONRPC do
   end
 
   @impl Explorer.ChainData
+  def blocks_by_numbers(block_numbers, hydrated?, opts) do
+    with {:ok, %Blocks{} = blocks} <-
+           EthereumJSONRPC.fetch_blocks_by_numbers(block_numbers, json_rpc_named_arguments(opts), hydrated?) do
+      {:ok, blocks_to_batch(blocks)}
+    end
+  end
+
+  @impl Explorer.ChainData
   def blocks_by_hashes(hashes, hydrated?, opts) do
     with {:ok, %Blocks{} = blocks} <-
            EthereumJSONRPC.fetch_blocks_by_hash(hashes, json_rpc_named_arguments(opts), hydrated?) do

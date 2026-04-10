@@ -11,6 +11,7 @@ defmodule Indexer.Fetcher.Withdrawal do
   alias EthereumJSONRPC.Blocks
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Withdrawal
+  alias Explorer.ChainData.{Backend, BlockBatch}
   alias Explorer.Helper
   alias Indexer.Transform.Addresses
 
@@ -97,7 +98,7 @@ defmodule Indexer.Fetcher.Withdrawal do
         blocks_to_fetch
         |> Stream.chunk_every(batch_size)
         |> Task.async_stream(
-          &{EthereumJSONRPC.fetch_blocks_by_numbers(&1, json_rpc_named_arguments), &1},
+          &{Backend.blocks_by_numbers(&1, true, json_rpc_named_arguments: json_rpc_named_arguments), &1},
           max_concurrency: concurrency,
           timeout: :infinity,
           zip_input_on_exit: true
@@ -128,6 +129,10 @@ defmodule Indexer.Fetcher.Withdrawal do
     end
   end
 
+  defp fetch_reducer({:ok, {{:ok, %BlockBatch{} = fetched_block_batch}, block_numbers}}, acc) do
+    fetch_reducer({:ok, {{:ok, block_batch_to_fetched_blocks(fetched_block_batch)}, block_numbers}}, acc)
+  end
+
   defp fetch_reducer({:ok, {{:ok, %Blocks{withdrawals_params: withdrawals_params}}, block_numbers}}, acc) do
     addresses = Addresses.extract_addresses(%{withdrawals: withdrawals_params})
 
@@ -153,6 +158,22 @@ defmodule Indexer.Fetcher.Withdrawal do
   defp fetch_reducer({:exit, {block_numbers, reason}}, acc) do
     Logger.error("failed to fetch: " <> inspect(reason) <> ". Retrying.")
     [block_numbers | acc] |> List.flatten()
+  end
+
+  defp block_batch_to_fetched_blocks(%BlockBatch{} = fetched_block_batch) do
+    %Blocks{
+      blocks_params: Map.get(fetched_block_batch.raw, :blocks_params, Enum.map(fetched_block_batch.blocks, & &1.raw)),
+      transactions_params:
+        Map.get(fetched_block_batch.raw, :transactions_params, Enum.map(fetched_block_batch.transactions, & &1.raw)),
+      withdrawals_params: Map.get(fetched_block_batch.raw, :withdrawals_params, fetched_block_batch.withdrawals),
+      block_second_degree_relations_params:
+        Map.get(
+          fetched_block_batch.raw,
+          :block_second_degree_relations_params,
+          fetched_block_batch.second_degree_relations
+        ),
+      errors: fetched_block_batch.errors
+    }
   end
 
   defp missing_block_numbers(from) do

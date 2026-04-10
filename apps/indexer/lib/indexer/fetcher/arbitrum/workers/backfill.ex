@@ -25,8 +25,9 @@ defmodule Indexer.Fetcher.Arbitrum.Workers.Backfill do
   import Ecto.Query
   import Indexer.Fetcher.Arbitrum.Utils.Logging, only: [log_warning: 1, log_debug: 1, log_info: 1]
 
-  alias EthereumJSONRPC.{Blocks, Receipts}
+  alias EthereumJSONRPC.Receipts
   alias Explorer.Chain.Block, as: RollupBlock
+  alias Explorer.ChainData.Backend
   alias Explorer.Chain.Hash
   alias Explorer.Chain.Transaction, as: RollupTransaction
   alias Explorer.Repo
@@ -185,8 +186,10 @@ defmodule Indexer.Fetcher.Arbitrum.Workers.Backfill do
     block_numbers
     |> Enum.chunk_every(chunk_size)
     |> Enum.reduce_while({:ok, []}, fn chunk, {:ok, acc} ->
-      case EthereumJSONRPC.fetch_blocks_by_numbers(chunk, json_rpc_named_arguments, false) do
-        {:ok, %Blocks{blocks_params: blocks}} -> {:cont, {:ok, acc ++ blocks}}
+      case Backend.blocks_by_numbers(chunk, false, json_rpc_named_arguments: json_rpc_named_arguments) do
+        {:ok, %Explorer.ChainData.BlockBatch{blocks: blocks}} ->
+          {:cont, {:ok, acc ++ Enum.map(blocks, & &1.raw)}}
+
         {:error, reason} -> {:halt, {:error, reason}}
       end
     end)
