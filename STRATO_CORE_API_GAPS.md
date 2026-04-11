@@ -153,18 +153,27 @@ Needed STRATO addition:
 
 ## Practical Next Endpoints To Add On STRATO
 
-The minimum STRATO-side additions that materially unblock Blockscout are:
+The initial private explorer additions are now in place for:
 
-1. `POST /logs/search`
-2. `POST /receipts/by-block-number`
-3. `POST /receipts/by-transaction-hash`
-4. `POST /state/codes`
+- receipts
+- logs
+- bytecode
+- synthetic first-trace
+- raw trace text
 
-These match the existing `:private_explorer_api` profile already scaffolded in
-Blockscout, so STRATO can add them incrementally without changing the
-Blockscout-side behaviour contract again.
+The remaining STRATO-side additions that materially unblock deeper Blockscout
+trace parity are:
 
-The exact request and response contract for those endpoints is documented in
+1. `POST /internal-transactions/by-block-number`
+2. `POST /internal-transactions/by-transaction`
+
+Those are the missing surfaces for:
+
+- nested internal transaction indexing
+- internal transaction pages beyond the synthetic root trace
+
+The exact request and response contract for the currently implemented private
+endpoints is documented in
 [`STRATO_PRIVATE_EXPLORER_API_SPEC.md`](./STRATO_PRIVATE_EXPLORER_API_SPEC.md).
 
 ## Recommendation
@@ -179,9 +188,7 @@ Use the current `:core_api` profile as the verified baseline for:
 
 Then add STRATO-side explorer-oriented endpoints for:
 
-- receipts
-- logs
-- bytecode
+- nested internal transactions
 
 Only after that should the STRATO backend become a serious candidate for
 running the full Blockscout indexer flow.

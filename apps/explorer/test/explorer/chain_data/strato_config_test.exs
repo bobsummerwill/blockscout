@@ -53,6 +53,8 @@ defmodule Explorer.ChainData.STRATO.ConfigTest do
     assert Config.profile(config) == :private_explorer_api
     assert Config.endpoint(:chain_info, config) == "/eth/v1.2/blockscout/chain-info"
     assert Config.endpoint(:blocks_by_range, config) == "/eth/v1.2/blockscout/blocks/range"
+    assert Config.endpoint(:transactions_first_trace, config) == "/eth/v1.2/blockscout/transactions/first-trace"
+    assert Config.endpoint(:transactions_raw_traces, config) == "/eth/v1.2/blockscout/transactions/raw-traces"
     assert Config.endpoint(:state_codes, config) == "/eth/v1.2/blockscout/state/codes"
   end
 

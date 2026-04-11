@@ -326,6 +326,96 @@ Response:
 
 Camel-case `transactionsCountMap` is also accepted.
 
+### `POST /transactions/first-trace`
+
+Purpose:
+
+- resolve `first_trace/2`
+- provide a synthetic top-level trace derived from persisted transaction and
+  transaction-result data
+
+Request:
+
+```json
+[
+  {
+    "block_hash": "0xblock",
+    "block_number": 12,
+    "hash_data": "0xtx",
+    "transaction_index": 1
+  }
+]
+```
+
+Response:
+
+```json
+{
+  "items": [
+    {
+      "block_hash": "0xblock",
+      "block_number": 12,
+      "first_trace": {
+        "transaction_hash": "0xtx",
+        "type": "call",
+        "call_type": "call",
+        "from_address_hash": "0xfrom",
+        "to_address_hash": "0xto",
+        "gas": 21000,
+        "gas_used": 20000,
+        "input": "0x1234",
+        "output": "0x5678",
+        "trace_address": [],
+        "index": 0,
+        "transaction_index": 1,
+        "value": 0
+      }
+    }
+  ],
+  "errors": []
+}
+```
+
+Notes:
+
+- this is intentionally a synthetic root trace, not a full nested internal-call tree
+- failed transactions should include `error` and omit success-only fields like `gas_used`
+
+### `POST /transactions/raw-traces`
+
+Purpose:
+
+- resolve `raw_traces_by_transaction/2`
+- expose persisted STRATO trace/debug text for Blockscout’s raw-trace page
+
+Request:
+
+```json
+{
+  "hash": "0xtx"
+}
+```
+
+Response:
+
+```json
+{
+  "traces": [
+    {
+      "transaction_hash": "0xtx",
+      "block_hash": "0xblock",
+      "block_number": 12,
+      "transaction_index": 1,
+      "status": "success",
+      "message": "",
+      "response": "0x5678",
+      "trace": "CALL 0xdeadbeef"
+    }
+  ],
+  "errors": []
+}
+```
+
 ### `POST /receipts/by-block-number`
 
 Purpose:

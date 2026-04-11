@@ -47,6 +47,42 @@ defmodule Explorer.ChainData.STRATO.Transactions do
     end
   end
 
+  @spec first_trace([map()], keyword()) :: {:ok, [map()]} | {:error, term()} | :ignore
+  def first_trace(transactions, opts) do
+    config = Config.get(opts)
+
+    case Config.profile(config) do
+      :core_api ->
+        :ignore
+
+      :private_explorer_api ->
+        with {:ok, payload} <- Client.post(Config.endpoint(:transactions_first_trace, config), transactions, opts) do
+          parse_first_trace(payload)
+        end
+    end
+  end
+
+  @spec raw_traces_by_transaction(%{hash: EthereumJSONRPC.hash(), block_number: EthereumJSONRPC.block_number()}, keyword()) ::
+          {:ok, [map()]} | {:error, term()} | :ignore
+  def raw_traces_by_transaction(%{hash: hash}, opts) do
+    config = Config.get(opts)
+
+    case Config.profile(config) do
+      :core_api ->
+        :ignore
+
+      :private_explorer_api ->
+        with {:ok, payload} <-
+               Client.post(
+                 Config.endpoint(:transactions_raw_traces, config),
+                 %{hash: hash},
+                 opts
+               ) do
+          parse_raw_traces(payload)
+        end
+    end
+  end
+
   defp fetch_transactions_from_core_api(hashes, opts, config) do
     hashes
     |> Enum.reduce_while({:ok, []}, fn hash, {:ok, transactions} ->
@@ -72,4 +108,52 @@ defmodule Explorer.ChainData.STRATO.Transactions do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  defp parse_first_trace(%{"items" => items}) when is_list(items) do
+    {:ok, Enum.map(items, &normalize_first_trace_item/1)}
+  end
+
+  defp parse_first_trace(%{"errors" => [_ | _] = errors}) do
+    {:error, errors}
+  end
+
+  defp parse_first_trace(other), do: {:error, {:unexpected_first_trace_payload, other}}
+
+  defp parse_raw_traces(%{"traces" => traces}) when is_list(traces), do: {:ok, traces}
+  defp parse_raw_traces(%{"errors" => [_ | _] = errors}), do: {:error, errors}
+  defp parse_raw_traces(other), do: {:error, {:unexpected_raw_traces_payload, other}}
+
+  defp normalize_first_trace_item(%{"first_trace" => first_trace} = item) do
+    %{
+      block_hash: item["block_hash"],
+      block_number: item["block_number"],
+      first_trace: normalize_first_trace(first_trace)
+    }
+  end
+
+  defp normalize_first_trace_item(item), do: item
+
+  defp normalize_first_trace(first_trace) do
+    %{}
+    |> maybe_put(:transaction_hash, first_trace["transaction_hash"])
+    |> maybe_put(:call_type, first_trace["call_type"])
+    |> maybe_put(:created_contract_address_hash, first_trace["created_contract_address_hash"])
+    |> maybe_put(:created_contract_code, first_trace["created_contract_code"])
+    |> maybe_put(:error, first_trace["error"])
+    |> maybe_put(:from_address_hash, first_trace["from_address_hash"])
+    |> maybe_put(:gas, first_trace["gas"])
+    |> maybe_put(:gas_used, first_trace["gas_used"])
+    |> maybe_put(:index, first_trace["index"])
+    |> maybe_put(:init, first_trace["init"])
+    |> maybe_put(:input, first_trace["input"])
+    |> maybe_put(:output, first_trace["output"])
+    |> maybe_put(:to_address_hash, first_trace["to_address_hash"])
+    |> maybe_put(:trace_address, first_trace["trace_address"])
+    |> maybe_put(:transaction_index, first_trace["transaction_index"])
+    |> maybe_put(:type, first_trace["type"])
+    |> maybe_put(:value, first_trace["value"])
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 end

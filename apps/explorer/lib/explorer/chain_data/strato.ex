@@ -72,10 +72,10 @@ defmodule Explorer.ChainData.STRATO do
   def internal_transactions_by_transactions(_transactions, _opts), do: :ignore
 
   @impl Explorer.ChainData
-  def raw_traces_by_transaction(_transaction, _opts), do: :ignore
+  def raw_traces_by_transaction(transaction, opts), do: Transactions.raw_traces_by_transaction(transaction, opts)
 
   @impl Explorer.ChainData
-  def first_trace(_transactions, _opts), do: :ignore
+  def first_trace(transactions, opts), do: Transactions.first_trace(transactions, opts)
 
   @impl Explorer.ChainData
   def subscribe_new_blocks(_opts), do: :ignore

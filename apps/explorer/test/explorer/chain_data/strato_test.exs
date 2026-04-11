@@ -214,6 +214,93 @@ defmodule Explorer.ChainData.STRATOTest do
                STRATO.transactions_count_by_block_numbers([10, 11], strato: [base_url: base_url(bypass)])
     end
 
+    test "first_trace/2 posts transaction params to /transactions/first-trace" do
+      bypass = Bypass.open()
+
+      on_exit(fn -> Bypass.down(bypass) end)
+
+      Bypass.expect_once(bypass, "POST", "/transactions/first-trace", fn conn ->
+        assert [
+                 %{
+                   "block_hash" => "0xblock",
+                   "block_number" => 12,
+                   "hash_data" => "0xtx",
+                   "transaction_index" => 1
+                 }
+               ] = Jason.decode!(read_body(conn))
+
+        Conn.resp(
+          conn,
+          200,
+          Jason.encode!(%{
+            "items" => [
+              %{
+                "block_hash" => "0xblock",
+                "block_number" => 12,
+                "first_trace" => %{
+                  "transaction_hash" => "0xtx",
+                  "type" => "call",
+                  "call_type" => "call",
+                  "from_address_hash" => "0xfrom",
+                  "to_address_hash" => "0xto",
+                  "gas" => 21_000,
+                  "gas_used" => 20_000,
+                  "input" => "0x1234",
+                  "output" => "0x5678",
+                  "trace_address" => [],
+                  "index" => 0,
+                  "transaction_index" => 1,
+                  "value" => 0
+                }
+              }
+            ],
+            "errors" => []
+          })
+        )
+      end)
+
+      assert {:ok, [%{block_hash: "0xblock", block_number: 12, first_trace: %{transaction_hash: "0xtx", type: "call"}}]} =
+               STRATO.first_trace(
+                 [
+                   %{
+                     block_hash: "0xblock",
+                     block_number: 12,
+                     hash_data: "0xtx",
+                     transaction_index: 1
+                   }
+                 ],
+                 strato: [base_url: base_url(bypass)]
+               )
+    end
+
+    test "raw_traces_by_transaction/2 posts the transaction hash to /transactions/raw-traces" do
+      bypass = Bypass.open()
+
+      on_exit(fn -> Bypass.down(bypass) end)
+
+      Bypass.expect_once(bypass, "POST", "/transactions/raw-traces", fn conn ->
+        assert %{"hash" => "0xtx"} = Jason.decode!(read_body(conn))
+
+        Conn.resp(
+          conn,
+          200,
+          Jason.encode!(%{
+            "traces" => [
+              %{
+                "transaction_hash" => "0xtx",
+                "trace" => "CALL 0xdeadbeef",
+                "status" => "success"
+              }
+            ],
+            "errors" => []
+          })
+        )
+      end)
+
+      assert {:ok, [%{"transaction_hash" => "0xtx", "trace" => "CALL 0xdeadbeef", "status" => "success"}]} =
+               STRATO.raw_traces_by_transaction(%{hash: "0xtx", block_number: 12}, strato: [base_url: base_url(bypass)])
+    end
+
     test "receipts_by_block_numbers/2 posts the block list to /receipts/by-block-number" do
       bypass = Bypass.open()
 
