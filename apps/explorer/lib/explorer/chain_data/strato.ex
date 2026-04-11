@@ -66,10 +66,12 @@ defmodule Explorer.ChainData.STRATO do
   def contract_calls(_requests, _abi, _leave_error_as_map, _opts), do: []
 
   @impl Explorer.ChainData
-  def internal_transactions_by_block_numbers(_block_numbers, _opts), do: :ignore
+  def internal_transactions_by_block_numbers(block_numbers, opts),
+    do: Transactions.internal_transactions_by_block_numbers(block_numbers, opts)
 
   @impl Explorer.ChainData
-  def internal_transactions_by_transactions(_transactions, _opts), do: :ignore
+  def internal_transactions_by_transactions(transactions, opts),
+    do: Transactions.internal_transactions_by_transactions(transactions, opts)
 
   @impl Explorer.ChainData
   def raw_traces_by_transaction(transaction, opts), do: Transactions.raw_traces_by_transaction(transaction, opts)

@@ -55,6 +55,12 @@ defmodule Explorer.ChainData.STRATO.ConfigTest do
     assert Config.endpoint(:blocks_by_range, config) == "/eth/v1.2/blockscout/blocks/range"
     assert Config.endpoint(:transactions_first_trace, config) == "/eth/v1.2/blockscout/transactions/first-trace"
     assert Config.endpoint(:transactions_raw_traces, config) == "/eth/v1.2/blockscout/transactions/raw-traces"
+    assert Config.endpoint(:internal_transactions_by_block_numbers, config) ==
+             "/eth/v1.2/blockscout/internal-transactions/by-block-number"
+
+    assert Config.endpoint(:internal_transactions_by_transactions, config) ==
+             "/eth/v1.2/blockscout/internal-transactions/by-transaction"
+
     assert Config.endpoint(:state_codes, config) == "/eth/v1.2/blockscout/state/codes"
   end
 

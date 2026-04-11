@@ -301,6 +301,111 @@ defmodule Explorer.ChainData.STRATOTest do
                STRATO.raw_traces_by_transaction(%{hash: "0xtx", block_number: 12}, strato: [base_url: base_url(bypass)])
     end
 
+    test "internal_transactions_by_block_numbers/2 posts the block list to /internal-transactions/by-block-number" do
+      bypass = Bypass.open()
+
+      on_exit(fn -> Bypass.down(bypass) end)
+
+      Bypass.expect_once(bypass, "POST", "/internal-transactions/by-block-number", fn conn ->
+        assert %{"block_numbers" => [12]} = Jason.decode!(read_body(conn))
+
+        Conn.resp(
+          conn,
+          200,
+          Jason.encode!(%{
+            "internal_transactions" => [
+              %{
+                "block_hash" => "0xblock",
+                "block_number" => 12,
+                "transaction_hash" => "0xtx",
+                "transaction_index" => 1,
+                "index" => 0,
+                "trace_address" => [],
+                "type" => "call",
+                "call_type" => "call",
+                "from_address_hash" => "0xfrom",
+                "to_address_hash" => "0xto",
+                "gas" => 21_000,
+                "gas_used" => 20_000,
+                "input" => "0x1234",
+                "output" => "0x5678",
+                "value" => 0
+              }
+            ],
+            "errors" => []
+          })
+        )
+      end)
+
+      assert {:ok, [%Explorer.ChainData.InternalTransaction{params: %{transaction_hash: "0xtx", type: "call", value: nil}}]} =
+               STRATO.internal_transactions_by_block_numbers([12], strato: [base_url: base_url(bypass)])
+    end
+
+    test "internal_transactions_by_transactions/2 posts tx params to /internal-transactions/by-transaction" do
+      bypass = Bypass.open()
+
+      on_exit(fn -> Bypass.down(bypass) end)
+
+      Bypass.expect_once(bypass, "POST", "/internal-transactions/by-transaction", fn conn ->
+        assert [
+                 %{
+                   "block_hash" => "0xblock",
+                   "block_number" => 12,
+                   "hash_data" => "0xtx",
+                   "transaction_index" => 1
+                 }
+               ] = Jason.decode!(read_body(conn))
+
+        Conn.resp(
+          conn,
+          200,
+          Jason.encode!(%{
+            "internal_transactions" => [
+              %{
+                "block_hash" => "0xblock",
+                "block_number" => 12,
+                "transaction_hash" => "0xtx",
+                "transaction_index" => 1,
+                "index" => 0,
+                "trace_address" => [],
+                "type" => "create",
+                "from_address_hash" => "0xfrom",
+                "created_contract_address_hash" => "0xcreated",
+                "gas" => 50_000,
+                "gas_used" => 42_000,
+                "init" => "0x6000",
+                "value" => 9
+              }
+            ],
+            "errors" => []
+          })
+        )
+      end)
+
+      assert {:ok,
+              [
+                %Explorer.ChainData.InternalTransaction{
+                  params: %{
+                    transaction_hash: "0xtx",
+                    type: "create",
+                    created_contract_address_hash: "0xcreated",
+                    value: 9
+                  }
+                }
+              ]} =
+               STRATO.internal_transactions_by_transactions(
+                 [
+                   %{
+                     block_hash: "0xblock",
+                     block_number: 12,
+                     hash_data: "0xtx",
+                     transaction_index: 1
+                   }
+                 ],
+                 strato: [base_url: base_url(bypass)]
+               )
+    end
+
     test "receipts_by_block_numbers/2 posts the block list to /receipts/by-block-number" do
       bypass = Bypass.open()
 

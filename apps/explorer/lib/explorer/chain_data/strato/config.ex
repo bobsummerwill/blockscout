@@ -11,6 +11,8 @@ defmodule Explorer.ChainData.STRATO.Config do
     transactions_count_by_block_numbers: "/eth/v1.2/blockscout/transactions/count/by-block-number",
     transactions_first_trace: "/eth/v1.2/blockscout/transactions/first-trace",
     transactions_raw_traces: "/eth/v1.2/blockscout/transactions/raw-traces",
+    internal_transactions_by_block_numbers: "/eth/v1.2/blockscout/internal-transactions/by-block-number",
+    internal_transactions_by_transactions: "/eth/v1.2/blockscout/internal-transactions/by-transaction",
     receipts_by_block_numbers: "/eth/v1.2/blockscout/receipts/by-block-number",
     receipts_by_transaction_hashes: "/eth/v1.2/blockscout/receipts/by-transaction-hash",
     logs_search: "/eth/v1.2/blockscout/logs/search",
