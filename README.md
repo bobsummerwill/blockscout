@@ -30,6 +30,7 @@ See the [project documentation](https://docs.blockscout.com/) for instructions:
 
 - [Manual deployment](https://docs.blockscout.com/for-developers/deployment/manual-deployment-guide)
 - [Docker-compose deployment](https://docs.blockscout.com/for-developers/deployment/docker-compose-deployment)
+- [STRATO Docker runbook](STRATO_DOCKER_RUNBOOK.md)
 - [Kubernetes deployment](https://docs.blockscout.com/for-developers/deployment/kubernetes-deployment)
 - [Manual deployment (backend + old UI)](https://docs.blockscout.com/for-developers/deployment/manual-old-ui)
 - [Ansible deployment](https://docs.blockscout.com/for-developers/ansible-deployment)
