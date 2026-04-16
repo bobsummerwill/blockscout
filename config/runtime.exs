@@ -353,6 +353,7 @@ config :explorer, Explorer.ChainData.STRATO,
       "private_explorer_api"
     ) || "private_explorer_api",
   base_url: strato_api_url,
+  bearer_token: System.get_env("STRATO_API_AUTH_TOKEN"),
   recv_timeout: ConfigHelper.parse_time_env_var("STRATO_PRIVATE_API_RECV_TIMEOUT", "30s"),
   connect_timeout: ConfigHelper.parse_time_env_var("STRATO_PRIVATE_API_CONNECT_TIMEOUT", "5s")
 

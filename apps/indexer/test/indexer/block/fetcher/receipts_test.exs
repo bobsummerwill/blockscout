@@ -149,4 +149,32 @@ defmodule Indexer.Block.Fetcher.ReceiptsTest do
              end)
     end
   end
+
+  describe "put/2" do
+    test "keeps transactions without matching receipts instead of crashing" do
+      transaction_with_receipt = %{
+        hash: "0x1",
+        created_contract_address_hash: "0xcreated"
+      }
+
+      transaction_without_receipt = %{
+        hash: "0x2",
+        created_contract_address_hash: nil
+      }
+
+      assert [
+               %{
+                 hash: "0x1",
+                 transaction_hash: "0x1",
+                 status: :ok,
+                 created_contract_address_hash: "0xcreated"
+               },
+               %{hash: "0x2", created_contract_address_hash: nil}
+             ] =
+               Receipts.put(
+                 [transaction_with_receipt, transaction_without_receipt],
+                 [%{transaction_hash: "0x1", status: :ok, created_contract_address_hash: nil}]
+               )
+    end
+  end
 end

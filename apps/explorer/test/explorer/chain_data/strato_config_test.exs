@@ -19,6 +19,7 @@ defmodule Explorer.ChainData.STRATO.ConfigTest do
       Explorer.ChainData.STRATO,
       profile: :private_explorer_api,
       base_url: "http://configured",
+      bearer_token: "configured-token",
       recv_timeout: :timer.seconds(10),
       endpoints: [
         chain_info: "/eth/v1.2/blockscout/chain-info",
@@ -30,11 +31,13 @@ defmodule Explorer.ChainData.STRATO.ConfigTest do
       Config.get(
         strato: [
           base_url: "http://override",
+          bearer_token: "override-token",
           endpoints: [blocks_by_range: "/custom-blocks/range"]
         ]
       )
 
     assert Keyword.get(config, :base_url) == "http://override"
+    assert Keyword.get(config, :bearer_token) == "override-token"
     assert Keyword.get(config, :recv_timeout) == :timer.seconds(10)
     assert Config.endpoint(:chain_info, config) == "/eth/v1.2/blockscout/chain-info"
     assert Config.endpoint(:blocks_by_range, config) == "/custom-blocks/range"

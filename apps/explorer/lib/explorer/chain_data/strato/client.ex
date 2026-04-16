@@ -21,7 +21,7 @@ defmodule Explorer.ChainData.STRATO.Client do
 
     with {:ok, url} <- build_url(config, path),
          {:ok, response} <- perform_request(method, url, body, config, opts) do
-      decode_response(response)
+      decode_response({:ok, response})
     end
   end
 
@@ -31,8 +31,15 @@ defmodule Explorer.ChainData.STRATO.Client do
         {:error, :strato_base_url_not_configured}
 
       base_url when is_binary(base_url) ->
-        {:ok, URI.merge(base_url, path) |> to_string()}
+        {:ok, join_url(base_url, path)}
     end
+  end
+
+  defp join_url(base_url, path) do
+    base_url = String.trim_trailing(base_url, "/")
+    path = if String.starts_with?(path, "/"), do: path, else: "/" <> path
+
+    base_url <> path
   end
 
   defp perform_request(method, url, body, config, opts) do
@@ -40,7 +47,8 @@ defmodule Explorer.ChainData.STRATO.Client do
     query = Keyword.get(opts, :params, [])
 
     headers =
-      [{"accept", "application/json"}]
+      [{"accept", "application/json"}, {"user-agent", "curl/8.0 (Blockscout STRATO client)"}]
+      |> maybe_put_authorization(config)
       |> maybe_put_content_type(body)
 
     request_opts = [
@@ -49,7 +57,24 @@ defmodule Explorer.ChainData.STRATO.Client do
       params: query
     ]
 
-    http_client.request(method, url, headers, encode_body(body), request_opts)
+    method
+    |> http_client.request(url, headers, encode_body(body), request_opts)
+    |> normalize_response()
+  end
+
+  defp normalize_response({:ok, _response} = response), do: response
+  defp normalize_response({:error, _reason} = response), do: response
+  defp normalize_response(%{status_code: _status_code} = response), do: {:ok, response}
+  defp normalize_response(other), do: other
+
+  defp maybe_put_authorization(headers, config) do
+    case Keyword.get(config, :bearer_token) do
+      token when is_binary(token) and token != "" ->
+        [{"authorization", "Bearer #{token}"} | headers]
+
+      _other ->
+        headers
+    end
   end
 
   defp maybe_put_content_type(headers, nil), do: headers

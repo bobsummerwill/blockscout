@@ -306,9 +306,13 @@ defmodule Indexer.Block.Fetcher do
 
   defp block_batch_to_fetched_blocks(%BlockBatch{} = fetched_block_batch) do
     %Blocks{
-      blocks_params: Map.get(fetched_block_batch.raw, :blocks_params, Enum.map(fetched_block_batch.blocks, & &1.raw)),
+      blocks_params: Map.get(fetched_block_batch.raw, :blocks_params, Enum.map(fetched_block_batch.blocks, &block_to_params/1)),
       transactions_params:
-        Map.get(fetched_block_batch.raw, :transactions_params, Enum.map(fetched_block_batch.transactions, & &1.raw)),
+        Map.get(
+          fetched_block_batch.raw,
+          :transactions_params,
+          Enum.map(fetched_block_batch.transactions, &transaction_to_params/1)
+        ),
       withdrawals_params: Map.get(fetched_block_batch.raw, :withdrawals_params, fetched_block_batch.withdrawals),
       block_second_degree_relations_params:
         Map.get(
@@ -317,6 +321,48 @@ defmodule Indexer.Block.Fetcher do
           fetched_block_batch.second_degree_relations
         ),
       errors: fetched_block_batch.errors
+    }
+  end
+
+  defp block_to_params(block) do
+    %{
+      hash: block.hash,
+      number: block.number,
+      parent_hash: block.parent_hash,
+      timestamp: block.timestamp,
+      miner_hash: block.miner_hash,
+      gas_limit: block.gas_limit,
+      gas_used: block.gas_used,
+      size: block.size,
+      nonce: block.nonce,
+      difficulty: block.difficulty,
+      total_difficulty: block.total_difficulty,
+      base_fee_per_gas: block.base_fee_per_gas,
+      uncles: block.uncles
+    }
+  end
+
+  defp transaction_to_params(transaction) do
+    %{
+      hash: transaction.hash,
+      block_hash: transaction.block_hash,
+      block_number: transaction.block_number,
+      index: transaction.index,
+      from_address_hash: transaction.from_address_hash,
+      to_address_hash: transaction.to_address_hash,
+      created_contract_address_hash: transaction.created_contract_address_hash,
+      value: transaction.value,
+      gas: transaction.gas,
+      gas_price: transaction.gas_price,
+      max_fee_per_gas: transaction.max_fee_per_gas,
+      max_priority_fee_per_gas: transaction.max_priority_fee_per_gas,
+      input: transaction.input,
+      nonce: transaction.nonce,
+      r: transaction.r,
+      s: transaction.s,
+      v: transaction.v,
+      type: transaction.type,
+      status: transaction.status
     }
   end
 

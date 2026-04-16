@@ -35,6 +35,7 @@ defmodule Explorer.ChainData.STRATO.Config do
     http_client: Explorer.HttpClient,
     profile: :private_explorer_api,
     base_url: nil,
+    bearer_token: nil,
     recv_timeout: :timer.seconds(30),
     connect_timeout: :timer.seconds(5),
     endpoints: []

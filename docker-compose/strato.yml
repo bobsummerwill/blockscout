@@ -26,17 +26,29 @@ services:
     extends:
       file: ./services/backend.yml
       service: backend
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+      args:
+        RELEASE_VERSION: ${RELEASE_VERSION:-11.0.0}
     links:
       - db:database
+    pull_policy: never
     environment:
       CHAIN_DATA_BACKEND: 'strato'
       STRATO_API_PROFILE: 'private_explorer_api'
-      STRATO_API_URL: ${STRATO_API_URL:-http://host.docker.internal:8081/strato-api}
+      STRATO_API_URL: ${STRATO_API_URL:-http://host.docker.internal:3000}
+      STRATO_API_AUTH_TOKEN: ${STRATO_API_AUTH_TOKEN:-}
+      INDEXER_DISABLE_EMPTY_BLOCKS_SANITIZER: 'true'
       ETHEREUM_JSONRPC_VARIANT: 'geth'
-      ETHEREUM_JSONRPC_HTTP_URL: ${ETHEREUM_JSONRPC_HTTP_URL:-http://host.docker.internal:8545/}
-      ETHEREUM_JSONRPC_TRACE_URL: ${ETHEREUM_JSONRPC_TRACE_URL:-http://host.docker.internal:8545/}
-      ETHEREUM_JSONRPC_WS_URL: ${ETHEREUM_JSONRPC_WS_URL:-ws://host.docker.internal:8545/}
+      ETHEREUM_JSONRPC_RECEIPTS_BY_BLOCK: 'true'
+      ETHEREUM_JSONRPC_HTTP_URL: ${ETHEREUM_JSONRPC_HTTP_URL:-http://host.docker.internal:8081/rpc}
+      ETHEREUM_JSONRPC_TRACE_URL: ${ETHEREUM_JSONRPC_TRACE_URL:-http://host.docker.internal:8081/rpc}
+      ETHEREUM_JSONRPC_WS_URL: ${ETHEREUM_JSONRPC_WS_URL:-ws://host.docker.internal:8081/rpc}
       INDEXER_DISABLE_PENDING_TRANSACTIONS_FETCHER: 'true'
+      MICROSERVICE_ACCOUNT_ABSTRACTION_ENABLED: 'false'
+      NFT_MEDIA_HANDLER_ENABLED: 'false'
+      NFT_MEDIA_HANDLER_REMOTE_DISPATCHER_NODE_MODE_ENABLED: 'false'
       CHAIN_ID: ${CHAIN_ID:-1337}
 
   visualizer:
@@ -77,6 +89,19 @@ services:
       file: ./services/stats.yml
       service: stats
 
+  nft_media_handler:
+    depends_on:
+      - backend
+    extends:
+      file: ./services/nft_media_handler.yml
+      service: nft_media_handler
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+      args:
+        RELEASE_VERSION: ${RELEASE_VERSION:-11.0.0}
+    pull_policy: never
+
   user-ops-indexer:
     depends_on:
       - db
@@ -84,6 +109,8 @@ services:
     extends:
       file: ./services/user-ops-indexer.yml
       service: user-ops-indexer
+    profiles:
+      - user-ops
 
   proxy:
     depends_on:
@@ -93,3 +120,6 @@ services:
     extends:
       file: ./services/nginx.yml
       service: proxy
+    ports:
+      - target: 8081
+        published: 8082

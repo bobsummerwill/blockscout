@@ -102,16 +102,33 @@ defmodule Indexer.Block.Fetcher.Receipts do
         {transaction_hash, receipt_params}
       end)
 
-    Enum.map(transactions_params, fn %{hash: transaction_hash} = transaction_params ->
-      receipts_params = Map.fetch!(transaction_hash_to_receipt_params, transaction_hash)
-      merged_params = Map.merge(transaction_params, receipts_params)
+    missing_receipt_hashes =
+      transactions_params
+      |> Enum.reject(&Map.has_key?(transaction_hash_to_receipt_params, &1.hash))
+      |> Enum.map(& &1.hash)
 
-      # Preserve the created_contract_address_hash from transaction_params if receipts_params
-      # would override it with nil
-      if transaction_params[:created_contract_address_hash] && is_nil(receipts_params[:created_contract_address_hash]) do
-        Map.put(merged_params, :created_contract_address_hash, transaction_params[:created_contract_address_hash])
-      else
-        merged_params
+    if missing_receipt_hashes != [] do
+      Logger.warning("missing receipts for fetched transactions",
+        count: Enum.count(missing_receipt_hashes),
+        first_missing_transaction_hash: List.first(missing_receipt_hashes)
+      )
+    end
+
+    Enum.map(transactions_params, fn %{hash: transaction_hash} = transaction_params ->
+      case Map.get(transaction_hash_to_receipt_params, transaction_hash) do
+        nil ->
+          transaction_params
+
+        receipt_params ->
+          merged_params = Map.merge(transaction_params, receipt_params)
+
+          # Preserve the created_contract_address_hash from transaction_params if receipt_params
+          # would override it with nil
+          if transaction_params[:created_contract_address_hash] && is_nil(receipt_params[:created_contract_address_hash]) do
+            Map.put(merged_params, :created_contract_address_hash, transaction_params[:created_contract_address_hash])
+          else
+            merged_params
+          end
       end
     end)
   end
@@ -174,8 +191,36 @@ defmodule Indexer.Block.Fetcher.Receipts do
 
   defp receipt_batch_to_params(%Receipt.Batch{} = receipt_batch) do
     %{
-      logs: Map.get(receipt_batch.raw, :logs, Enum.map(receipt_batch.logs, & &1.raw)),
-      receipts: Map.get(receipt_batch.raw, :receipts, Enum.map(receipt_batch.receipts, & &1.raw))
+      logs: Map.get(receipt_batch.raw, :logs, Enum.map(receipt_batch.logs, &log_to_params/1)),
+      receipts: Map.get(receipt_batch.raw, :receipts, Enum.map(receipt_batch.receipts, &receipt_to_params/1))
+    }
+  end
+
+  defp receipt_to_params(receipt) do
+    %{
+      transaction_hash: receipt.transaction_hash,
+      transaction_index: receipt.transaction_index,
+      block_hash: receipt.block_hash,
+      block_number: receipt.block_number,
+      cumulative_gas_used: receipt.cumulative_gas_used,
+      gas_used: receipt.gas_used,
+      gas_price: receipt.gas_price,
+      created_contract_address_hash: receipt.created_contract_address_hash,
+      status: receipt.status,
+      logs_bloom: receipt.logs_bloom
+    }
+  end
+
+  defp log_to_params(log) do
+    %{
+      address_hash: log.address_hash,
+      topics: log.topics,
+      data: log.data,
+      block_hash: log.block_hash,
+      block_number: log.block_number,
+      transaction_hash: log.transaction_hash,
+      transaction_index: log.transaction_index,
+      index: log.index
     }
   end
 end

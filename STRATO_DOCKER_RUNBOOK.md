@@ -28,9 +28,9 @@ The compose overlay for this setup is:
 The overlay assumes:
 
 - private Blockscout API base URL:
-  - `http://host.docker.internal:8081/strato-api`
+  - `http://host.docker.internal:3000`
 - STRATO Ethereum JSON-RPC shim:
-  - `http://host.docker.internal:8545/`
+  - `http://host.docker.internal:8081/rpc`
 
 If your STRATO deployment uses different ports or prefixes, override these environment variables before starting Blockscout:
 
@@ -39,6 +39,22 @@ If your STRATO deployment uses different ports or prefixes, override these envir
 - `ETHEREUM_JSONRPC_TRACE_URL`
 - `ETHEREUM_JSONRPC_WS_URL`
 - `CHAIN_ID`
+
+For a local STRATO node started with `strato-up`, the direct API on port `3000` can be used for Blockscout's private explorer integration without going through the nginx OAuth layer.
+
+If you intentionally point `STRATO_API_URL` at the nginx-proxied route on port `8081`, export a bearer token before starting Blockscout:
+
+```bash
+export STRATO_API_AUTH_TOKEN="$(
+  python3 - <<'PY'
+import json
+from pathlib import Path
+
+token = json.loads(Path('~/Projects/strato-platform/mynode/secrets/oauth_token').expanduser().read_text())
+print(token['access_token'])
+PY
+)"
+```
 
 ## Start Command
 

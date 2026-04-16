@@ -219,6 +219,9 @@ defmodule Explorer.ChainData.STRATO.Mapper do
         parse_integer(field(payload, ["max_priority_fee_per_gas", "maxPriorityFeePerGas"])),
       input: field(payload, ["input", "data"]) || tx_data_to_input(field(payload, ["txData"])),
       nonce: parse_integer(field(payload, ["nonce"])),
+      r: signature_component(payload, ["r"]),
+      s: signature_component(payload, ["s"]),
+      v: signature_component(payload, ["v", "y_parity", "yParity"]),
       type: parse_integer(field(payload, ["type"])),
       status: parse_status(field(payload, ["status"])),
       raw: payload
@@ -328,6 +331,13 @@ defmodule Explorer.ChainData.STRATO.Mapper do
   end
 
   defp parse_integer(_value), do: nil
+
+  defp signature_component(payload, keys) do
+    payload
+    |> field(keys)
+    |> parse_integer()
+    |> Kernel.||(0)
+  end
 
   defp parse_datetime(nil), do: nil
   defp parse_datetime(%DateTime{} = value), do: value

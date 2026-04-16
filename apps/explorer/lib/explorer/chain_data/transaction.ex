@@ -18,6 +18,9 @@ defmodule Explorer.ChainData.Transaction do
           max_priority_fee_per_gas: non_neg_integer() | nil,
           input: String.t() | nil,
           nonce: non_neg_integer() | nil,
+          r: non_neg_integer() | nil,
+          s: non_neg_integer() | nil,
+          v: non_neg_integer() | nil,
           type: non_neg_integer() | nil,
           status: atom() | nil,
           raw: map()
@@ -38,6 +41,9 @@ defmodule Explorer.ChainData.Transaction do
     :max_priority_fee_per_gas,
     :input,
     :nonce,
+    :r,
+    :s,
+    :v,
     :type,
     :status,
     raw: %{}

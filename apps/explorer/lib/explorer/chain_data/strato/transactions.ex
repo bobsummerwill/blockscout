@@ -86,45 +86,11 @@ defmodule Explorer.ChainData.STRATO.Transactions do
 
   @spec internal_transactions_by_block_numbers([EthereumJSONRPC.block_number()], keyword()) ::
           {:ok, [InternalTransaction.t()]} | {:error, term()} | :ignore
-  def internal_transactions_by_block_numbers(block_numbers, opts) do
-    config = Config.get(opts)
-
-    case Config.profile(config) do
-      :core_api ->
-        :ignore
-
-      :private_explorer_api ->
-        with {:ok, payload} <-
-               Client.post(
-                 Config.endpoint(:internal_transactions_by_block_numbers, config),
-                 %{block_numbers: block_numbers},
-                 opts
-               ) do
-          parse_internal_transactions(payload)
-        end
-    end
-  end
+  def internal_transactions_by_block_numbers(_block_numbers, _opts), do: :ignore
 
   @spec internal_transactions_by_transactions([map()], keyword()) ::
           {:ok, [InternalTransaction.t()]} | {:error, term()} | :ignore
-  def internal_transactions_by_transactions(transactions, opts) do
-    config = Config.get(opts)
-
-    case Config.profile(config) do
-      :core_api ->
-        :ignore
-
-      :private_explorer_api ->
-        with {:ok, payload} <-
-               Client.post(
-                 Config.endpoint(:internal_transactions_by_transactions, config),
-                 transactions,
-                 opts
-               ) do
-          parse_internal_transactions(payload)
-        end
-    end
-  end
+  def internal_transactions_by_transactions(_transactions, _opts), do: :ignore
 
   defp fetch_transactions_from_core_api(hashes, opts, config) do
     hashes
@@ -187,6 +153,8 @@ defmodule Explorer.ChainData.STRATO.Transactions do
   defp normalize_first_trace_item(item), do: item
 
   defp normalize_first_trace(first_trace) do
+    output = normalized_output(first_trace["output"], first_trace["error"])
+
     %{}
     |> maybe_put(:transaction_hash, first_trace["transaction_hash"])
     |> maybe_put(:call_type, first_trace["call_type"])
@@ -199,7 +167,7 @@ defmodule Explorer.ChainData.STRATO.Transactions do
     |> maybe_put(:index, first_trace["index"])
     |> maybe_put(:init, first_trace["init"])
     |> maybe_put(:input, first_trace["input"])
-    |> maybe_put(:output, first_trace["output"])
+    |> maybe_put(:output, output)
     |> maybe_put(:to_address_hash, first_trace["to_address_hash"])
     |> maybe_put(:trace_address, first_trace["trace_address"])
     |> maybe_put(:transaction_index, first_trace["transaction_index"])
@@ -208,6 +176,8 @@ defmodule Explorer.ChainData.STRATO.Transactions do
   end
 
   defp normalize_internal_transaction(item) do
+    output = normalized_output(item["output"], item["error"])
+
     %{}
     |> maybe_put(:block_hash, item["block_hash"])
     |> maybe_put(:block_number, item["block_number"])
@@ -221,7 +191,7 @@ defmodule Explorer.ChainData.STRATO.Transactions do
     |> maybe_put(:index, item["index"])
     |> maybe_put(:init, item["init"])
     |> maybe_put(:input, item["input"])
-    |> maybe_put(:output, item["output"])
+    |> maybe_put(:output, output)
     |> maybe_put(:to_address_hash, item["to_address_hash"])
     |> maybe_put(:trace_address, item["trace_address"])
     |> maybe_put(:transaction_hash, item["transaction_hash"])
@@ -237,4 +207,10 @@ defmodule Explorer.ChainData.STRATO.Transactions do
   defp normalize_value(0), do: nil
   defp normalize_value("0"), do: nil
   defp normalize_value(value), do: value
+
+  defp normalized_output(nil, nil), do: "0x"
+  defp normalized_output(nil, _error), do: nil
+  defp normalized_output("", nil), do: "0x"
+  defp normalized_output("", _error), do: nil
+  defp normalized_output(value, _error), do: value
 end
